@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Constitutive-develop\src\MGroup.Constitutive.Structural\MGroup.Constitutive.Structural.csproj" />
     <ProjectReference Include="..\..\..\MSolve.Multiscale-db7e753dddf0d64d94d8490ba4cf837fb46c109e\src\MGroup.Multiscale\MGroup.Multiscale.csproj" />
+    <ProjectReference Include="..\..\..\MSolve.Stochastic\src\MGroup.Stochastic.Structural\MGroup.Stochastic.Structural.csproj" />
     <ProjectReference Include="..\MGroup.MachineLearning.TensorFlow\MGroup.MachineLearning.TensorFlow.csproj" />
     <ProjectReference Include="..\MGroup.MachineLearning\MGroup.MachineLearning.csproj" />
   </ItemGroup>

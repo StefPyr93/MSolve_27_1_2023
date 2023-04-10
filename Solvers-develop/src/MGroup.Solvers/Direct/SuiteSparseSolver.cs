@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+
 using MGroup.LinearAlgebra.Matrices;
 using MGroup.LinearAlgebra.Triangulation;
 using MGroup.LinearAlgebra.Vectors;
@@ -29,7 +30,7 @@ namespace MGroup.Solvers.Direct
 		private bool mustFactorize = true;
 		private CholeskySuiteSparse factorization;
 
-		private SuiteSparseSolver(GlobalAlgebraicModel<SymmetricCscMatrix> model, double factorizationPivotTolerance) 
+		private SuiteSparseSolver(GlobalAlgebraicModel<SymmetricCscMatrix> model, double factorizationPivotTolerance)
 			: base(model, "SkylineSolver")
 		{
 			this.factorizationPivotTolerance = factorizationPivotTolerance;

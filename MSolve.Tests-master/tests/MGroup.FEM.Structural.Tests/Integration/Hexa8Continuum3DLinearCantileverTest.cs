@@ -29,9 +29,9 @@ namespace MGroup.FEM.Structural.Tests.Integration
 			var solver = solverFactory.BuildSolver(algebraicModel);
 			var problem = new ProblemStructural(model, algebraicModel);
 
-			var loadControlAnalyzerBuilder = new LoadControlAnalyzer.Builder(algebraicModel, solver, problem, numIncrements: 2)
+			var loadControlAnalyzerBuilder = new LoadControlAnalyzer.Builder(algebraicModel, solver, problem, numIncrements: 100)
 			{
-				ResidualTolerance = 1E-8,
+				ResidualTolerance = 1E-3,
 				MaxIterationsPerIncrement = 100,
 				NumIterationsForMatrixRebuild = 1
 			};

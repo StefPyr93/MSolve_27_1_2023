@@ -14,8 +14,11 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="MGroup.LinearAlgebra.Distributed" Version="0.1.0-unstable.77" />
-    <PackageReference Include="MGroup.MSolve.Core" Version="0.2.0-unstable.63" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\LinearAlgebra-develop\src\MGroup.LinearAlgebra.Distributed\MGroup.LinearAlgebra.Distributed.csproj" />
+    <ProjectReference Include="..\..\..\MSolve.Core-develop\src\MGroup.MSolve.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -87,7 +87,7 @@ namespace MGroup.FEM.Structural.Tests.ExampleModels
 			var loads = new List<INodalLoadBoundaryCondition>();
 			for (var i = 17; i < 21; i++)
 			{
-				loads.Add(new NodalLoad(model.NodesDictionary[i], StructuralDof.TranslationX, amount: 1 * 850d));
+				loads.Add(new NodalLoad(model.NodesDictionary[i], StructuralDof.TranslationX, amount: 10 * 1700d));
 			}
 
 			model.BoundaryConditions.Add(new StructuralBoundaryConditionSet(constraints, loads));

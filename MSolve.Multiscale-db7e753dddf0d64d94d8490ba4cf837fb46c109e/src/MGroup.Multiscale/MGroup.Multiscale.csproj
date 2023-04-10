@@ -5,13 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MGroup.Constitutive.Structural" Version="0.2.0-unstable.61" />
-    <PackageReference Include="MGroup.FEM" Version="0.2.0-unstable.108" />
-    <PackageReference Include="MGroup.FEM.Structural" Version="0.2.0-unstable.108" />
-    <PackageReference Include="MGroup.MSolve.Core" Version="0.2.0-unstable.65" />
-    <PackageReference Include="MGroup.NumericalAnalyzers" Version="0.2.0-unstable.52" />
-    <PackageReference Include="MGroup.NumericalAnalyzers.Discretization" Version="0.2.0-unstable.52" />
-    <PackageReference Include="MGroup.Solvers" Version="0.2.0-unstable.18" />
+    <ProjectReference Include="..\..\..\Constitutive-develop\src\MGroup.Constitutive.Structural\MGroup.Constitutive.Structural.csproj" />
+    <ProjectReference Include="..\..\..\FEM-develop\src\MGroup.FEM.Structural\MGroup.FEM.Structural.csproj" />
+    <ProjectReference Include="..\..\..\FEM-develop\src\MGroup.FEM\MGroup.FEM.csproj" />
+    <ProjectReference Include="..\..\..\MSolve.Core-develop\src\MGroup.MSolve.Core.csproj" />
+    <ProjectReference Include="..\..\..\NumericalAnalyzers-develop\src\MGroup.NumericalAnalyzers.Discretization\MGroup.NumericalAnalyzers.Discretization.csproj" />
+    <ProjectReference Include="..\..\..\NumericalAnalyzers-develop\src\MGroup.NumericalAnalyzers\MGroup.NumericalAnalyzers.csproj" />
+    <ProjectReference Include="..\..\..\Solvers-develop\src\MGroup.Solvers\MGroup.Solvers.csproj" />
   </ItemGroup>
 
 </Project>

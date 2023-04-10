@@ -23,11 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\MSolve.Stochastic\src\MGroup.Stochastic.Structural\MGroup.Stochastic.Structural.csproj" />
     <ProjectReference Include="..\..\src\MGroup.Constitutive.Structural.MachineLearning\MGroup.Constitutive.Structural.MachineLearning.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="SavedFiles\" />
   </ItemGroup>
 
 </Project>

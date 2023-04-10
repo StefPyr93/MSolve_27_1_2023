@@ -12,12 +12,12 @@ using MGroup.LinearAlgebra.Matrices;
 
 namespace MGroup.MachineLearning.Tests
 {
-	public static class NeuralNetworkMaterialAccumAbsStrains3DTest
+	public static class NeuralNetworkMaterialAccumAbsStrains3DBuilderTest
 	{
 		[Fact]
 		public static void RunTest()
 		{
-			var neuralNetworkmaterial = new NeuralNetworkMaterialBuilder();
+			var neuralNetworkmaterial = new NeuralNetworkMaterialAccumAbsStrains3DBuilder();
 			neuralNetworkmaterial.GenerateStrainStressData();
 			var trainedNetwork = neuralNetworkmaterial.TrainNeuralNetwork();
 

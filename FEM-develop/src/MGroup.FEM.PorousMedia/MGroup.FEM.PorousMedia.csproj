@@ -11,10 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MGroup.Constitutive.PorousMedia" Version="0.2.0-unstable.61" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Constitutive-develop\src\MGroup.Constitutive.PorousMedia\MGroup.Constitutive.PorousMedia.csproj" />
     <ProjectReference Include="..\MGroup.FEM\MGroup.FEM.csproj" />
   </ItemGroup>
 </Project>

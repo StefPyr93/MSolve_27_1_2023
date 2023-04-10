@@ -15,14 +15,12 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 			// these files are used to generate an already trained FeedForwardNeuralNetwork which was created using strain-stress pairs from an ElasticMaterial3D(youngModulus:20, poissonRatio:0.2)
 			string initialPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location).Split(new string[] { "\\bin" }, StringSplitOptions.None)[0];
 			var folderName = "SavedFiles";
-			var netPathName = "network_architecture.txt";
+			var netPathName = "network_architecture";
 			netPathName = Path.Combine(initialPath, folderName, netPathName);
 			var weightsPathName = "trained_weights";
 			weightsPathName = Path.Combine(initialPath, folderName, weightsPathName);
-			var normalizationPathName = "normalizationX";
+			var normalizationPathName = "normalization";
 			normalizationPathName = Path.Combine(initialPath, folderName, normalizationPathName);
-			//var normalizationYPathName = "normalizationY";
-			//normalizationYPathName = Path.Combine(initialPath, folderName, normalizationYPathName);
 
 			var neuralNetwork = new FeedForwardNeuralNetwork();
 			neuralNetwork.LoadNetwork(netPathName, weightsPathName, normalizationPathName);

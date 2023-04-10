@@ -26,6 +26,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 	{
 		private Keras.Model model;
 		private NDArray trainX, testX, trainY, testY;
+		private bool classification;
 
 		public int? Seed { get; }
 		public int BatchSize { get; }
@@ -36,8 +37,9 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 		public OptimizerV2 Optimizer { get; }
 		public ILossFunc LossFunction { get; }
 		public Layer[] Layer { get; private set; }
+	
 
-		public ConvolutionalNeuralNetwork(INormalization normalizationX, INormalization normalizationY, OptimizerV2 optimizer, ILossFunc lossFunc, INetworkLayer[] neuralNetworkLayers, int epochs, int batchSize = -1, int? seed = 1)
+		public ConvolutionalNeuralNetwork(INormalization normalizationX, INormalization normalizationY, OptimizerV2 optimizer, ILossFunc lossFunc, INetworkLayer[] neuralNetworkLayers, int epochs, int batchSize = -1, int? seed = 1, bool classification = false)
 		{
 			BatchSize = batchSize;
 			Epochs = epochs;
@@ -47,6 +49,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 			Optimizer = optimizer;
 			LossFunction = lossFunc;
 			NeuralNetworkLayer = neuralNetworkLayers;
+			this.classification = classification;
 
 			if (seed != null)
 			{
@@ -73,14 +76,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 
 			model.compile(loss: LossFunction, optimizer: Optimizer, metrics: new[] { "accuracy" });
 
-			var train_data = tf.data.Dataset.from_tensor_slices(this.trainX, this.trainY);
-			train_data = train_data.repeat()
-				.shuffle(5000)
-				.batch(BatchSize)
-				.prefetch(1)
-				.take(100);
-			model.fit(train_data, batch_size: BatchSize, epochs: Epochs, shuffle: false);
-			//model.fit(this.trainX, this.trainY, batch_size: BatchSize, epochs: Epochs, shuffle: false);
+			model.fit(this.trainX, this.trainY, batch_size: BatchSize, epochs: Epochs, shuffle: false);
 
 			if (testX != null && testY != null)
 			{
@@ -109,56 +105,63 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 			return responses;
 		}
 
-		public double[][,] EvaluateResponseGradients(double[,] stimuli)
-		{
-			stimuli = NormalizationX.Normalize(stimuli);
+		//public double[][,] EvaluateResponseGradients(double[,] stimuli)
+		//{
+		//	stimuli = NormalizationX.Normalize(stimuli);
 
-			var responseGradients = new double[stimuli.GetLength(0)][,];
-			for (int k = 0; k < stimuli.GetLength(0); k++)
-			{
-				var sample = new double[1, stimuli.GetLength(1)];
-				for (int i = 0; i < stimuli.GetLength(1); i++)
-				{
-					sample[0, i] = stimuli[k, i];
-				}
+		//	var responseGradients = new double[stimuli.GetLength(0)][,];
+		//	for (int k = 0; k < stimuli.GetLength(0); k++)
+		//	{
+		//		var sample = new double[1, stimuli.GetLength(1)];
+		//		for (int i = 0; i < stimuli.GetLength(1); i++)
+		//		{
+		//			sample[0, i] = stimuli[k, i];
+		//		}
 
-				var ratioX = NormalizationX.ScalingRatio;
+		//		var ratioX = NormalizationX.ScalingRatio;
 
-				var npSample = np.array(sample);
-				using var tape = tf.GradientTape(persistent: true);
-				{
-					tape.watch(npSample);
-					Tensor pred = model.Apply(npSample, training: false);
-					var ratioY = NormalizationY.ScalingRatio;
+		//		var npSample = np.array(sample);
+		//		using var tape = tf.GradientTape(persistent: true);
+		//		{
+		//			tape.watch(npSample);
+		//			Tensor pred = model.Apply(npSample, training: false);
+		//			var ratioY = NormalizationY.ScalingRatio;
 
-					var numRowsGrad = pred.shape.dims[1];
-					var numColsGrad = npSample.GetShape().as_int_list()[1];
-					var slicedPred = new Tensor();
-					responseGradients[k] = new double[numRowsGrad, numColsGrad];
-					for (int i = 0; i < numRowsGrad; i++)
-					{
-						slicedPred = tf.slice<int, int>(pred, new int[] { 0, i }, new int[] { 1, 1 });
-						var slicedGrad = tape.gradient(slicedPred, npSample).ToArray<double>();
-						for (int j = 0; j < numColsGrad; j++)
-						{
-							responseGradients[k][i, j] = ratioY[i] / ratioX[j] * slicedGrad[j];
-						}
-					}
-				}
-			}
+		//			var numRowsGrad = pred.shape.dims[1];
+		//			var numColsGrad = npSample.GetShape().as_int_list()[1];
+		//			var slicedPred = new Tensor();
+		//			responseGradients[k] = new double[numRowsGrad, numColsGrad];
+		//			for (int i = 0; i < numRowsGrad; i++)
+		//			{
+		//				slicedPred = tf.slice<int, int>(pred, new int[] { 0, i }, new int[] { 1, 1 });
+		//				var slicedGrad = tape.gradient(slicedPred, npSample).ToArray<double>();
+		//				for (int j = 0; j < numColsGrad; j++)
+		//				{
+		//					responseGradients[k][i, j] = ratioY[i] / ratioX[j] * slicedGrad[j];
+		//				}
+		//			}
+		//		}
+		//	}
 
-			return responseGradients;
-		}
+		//	return responseGradients;
+		//}
 
 		public double ValidateNetwork(double[,,,] testX, double[,] testY)
 		{
 			var predY = EvaluateResponses(testX);
 			var predYnp = np.array(predY);
 			var testYnp = np.array(testY);
-			var loss = LossFunction.Call(testYnp, predYnp);
-			var correct_prediction = tf.equal(tf.math.argmax(predYnp, 1), tf.cast(tf.squeeze(testYnp), tf.int64));
-			var accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), axis: -1);
-			return (double)loss.numpy()[0];
+			var accuracy = new Tensor();
+			if (classification == false)
+			{
+				accuracy = LossFunction.Call(testYnp, predYnp);
+			}
+			else
+			{
+				var correct_prediction = tf.equal(tf.math.argmax(predYnp, 1), tf.cast(tf.squeeze(testYnp), tf.int64));
+				accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), axis: -1);
+			}
+			return (double)accuracy.ToArray<float>()[0];
 		}
 
 		public void SaveNetwork(string netPath, string weightsPath, string normalizationPath)

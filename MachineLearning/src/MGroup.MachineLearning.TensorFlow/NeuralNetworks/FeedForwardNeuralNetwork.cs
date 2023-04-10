@@ -22,6 +22,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
         //public INetworkLayer[] neuralNetworkLayer { get; private set; }
         private Keras.Model model;
         private NDArray trainX, testX, trainY, testY;
+		private bool classification;
 
         public int? Seed { get; }
         public int BatchSize { get; }
@@ -33,7 +34,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
         public ILossFunc LossFunction { get; }
         public Layer[] Layer { get; private set; }
 
-        public FeedForwardNeuralNetwork(INormalization normalizationX, INormalization normalizationY, OptimizerV2 optimizer, ILossFunc lossFunc, INetworkLayer[] neuralNetworkLayer, int epochs, int batchSize = -1, int? seed = 1)
+        public FeedForwardNeuralNetwork(INormalization normalizationX, INormalization normalizationY, OptimizerV2 optimizer, ILossFunc lossFunc, INetworkLayer[] neuralNetworkLayer, int epochs, int batchSize = -1, int? seed = 1,bool classification = false)
         {
             BatchSize = batchSize;
             Epochs = epochs;
@@ -43,6 +44,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
             Optimizer = optimizer;
             LossFunction = lossFunc;
             NeuralNetworkLayer = neuralNetworkLayer;
+			this.classification = classification;
 
             if (seed != null)
             {
@@ -138,7 +140,26 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
             return responseGradients;
         }
 
-        public void SaveNetwork(string netPath, string weightsPath, string normalizationPath)
+		public double ValidateNetwork(double[,] testX, double[,] testY)
+		{
+			var predY = EvaluateResponses(testX);
+			var predYnp = np.array(predY);
+			var testYnp = np.array(testY);
+			var accuracy = new Tensor();
+			if (classification == false)
+			{
+				accuracy = LossFunction.Call(testYnp, predYnp);
+				return (double)accuracy.numpy()[0];
+			}
+			else
+			{
+				var correct_prediction = tf.equal(tf.math.argmax(predYnp, 1), tf.cast(tf.squeeze(testYnp), tf.int64));
+				accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), axis: -1);
+				return (double)accuracy.ToArray<float>()[0];
+			}
+		}
+
+		public void SaveNetwork(string netPath, string weightsPath, string normalizationPath)
         {
             model.save_weights(weightsPath);
 

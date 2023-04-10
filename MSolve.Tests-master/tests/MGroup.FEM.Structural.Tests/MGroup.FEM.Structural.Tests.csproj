@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -7,13 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ExampleModels\Hexa8Continuum3DLinearCantileverExample.cs" />
+    <Compile Remove="Integration\Hexa8Continuum3DLinearCantileverTest.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.msbuild" Version="2.6.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="MGroup.FEM.Structural" Version="0.2.0-unstable.116" />
-    <PackageReference Include="MGroup.NumericalAnalyzers.Discretization" Version="0.2.0-unstable.56" />
-    <PackageReference Include="MGroup.Solvers" Version="0.2.0-unstable.18" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.2.0" />
     <PackageReference Include="Moq" Version="4.13.0" />
     <PackageReference Include="OpenCover" Version="4.7.922" />
@@ -31,7 +33,11 @@
     <None Remove="MGroup.Solvers" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="ExampleModels\" />
     <Folder Include="Commons\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\FEM-develop\src\MGroup.FEM.Structural\MGroup.FEM.Structural.csproj" />
+    <ProjectReference Include="..\..\..\NumericalAnalyzers-develop\src\MGroup.NumericalAnalyzers.Discretization\MGroup.NumericalAnalyzers.Discretization.csproj" />
+    <ProjectReference Include="..\..\..\Solvers-develop\src\MGroup.Solvers\MGroup.Solvers.csproj" />
   </ItemGroup>
 </Project>

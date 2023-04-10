@@ -11,13 +11,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MGroup.LinearAlgebra" Version="0.1.0-unstable.77" />
-    <PackageReference Include="MGroup.MSolve.Core" Version="0.2.0-unstable.65" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Interfaces\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\LinearAlgebra-develop\src\MGroup.LinearAlgebra\MGroup.LinearAlgebra.csproj" />
+    <ProjectReference Include="..\..\..\MSolve.Core-develop\src\MGroup.MSolve.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

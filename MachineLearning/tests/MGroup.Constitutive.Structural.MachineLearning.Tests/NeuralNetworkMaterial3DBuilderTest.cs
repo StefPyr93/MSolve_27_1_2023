@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 
 using MGroup.Constitutive.Structural.MachineLearning;
@@ -12,7 +12,7 @@ using MGroup.LinearAlgebra.Matrices;
 
 namespace MGroup.MachineLearning.Tests
 {
-    public static class NeuralNetworkMaterial3DTest
+    public static class NeuralNetworkMaterial3DBuilderTest
 	{
         [Fact]
 		public static void RunTest()

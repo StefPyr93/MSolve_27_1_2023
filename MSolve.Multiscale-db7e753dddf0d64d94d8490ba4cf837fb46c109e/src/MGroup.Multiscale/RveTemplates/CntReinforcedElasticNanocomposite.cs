@@ -28,9 +28,9 @@ namespace MGroup.Multiscale
 {
 	public class CntReinforcedElasticNanocomposite : IRVEbuilder
 	{
-		int hexa1 = 3;
-		int hexa2 = 3;
-		int hexa3 = 3;
+		int hexa1 = 10;
+		int hexa2 = 10;
+		int hexa3 = 10;
 
 		double L01 = 100;
 		double L02 = 100;
@@ -38,7 +38,7 @@ namespace MGroup.Multiscale
 
 		IIsotropicContinuumMaterial3D matrixMaterial;
 		IIsotropicContinuumMaterial3D inclusionMaterial;
-		IIsotropicContinuumMaterial3D cohesiveMaterial;
+		ICohesiveZoneMaterial cohesiveMaterial;
 		int hostElements { get; set; }
 		int embeddedElements { get; set; }
 		int hostNodes { get; set; }
@@ -75,9 +75,9 @@ namespace MGroup.Multiscale
 
 		public bool readFromText { get; set; }
 
-		public CntReinforcedElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, IIsotropicContinuumMaterial3D cohesiveMaterial = null)
+		public CntReinforcedElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, ICohesiveZoneMaterial cohesiveMaterial = null)
 		{
-			K_el = 10; K_pl = 1.0; T_max = 0.10;
+			K_el = 10; K_pl = 1; T_max = 0.00001;
 			//this.matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
 			//constParameters = new double[3] { K_el, K_pl, T_max };
 			this.matrixMaterial = matrixMaterial;
@@ -134,6 +134,12 @@ namespace MGroup.Multiscale
 				this.CntMaterial = new ElasticMaterial3D(youngModulus, (double)((youngModulus / (2 * shearModulus)) - 1));
 			else
 				this.CntMaterial = inclusionMaterial;
+
+			if (cohesiveMaterial == null)
+				//this.cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
+				this.cohesiveMaterial = new BenzeggaghKenaneCohesiveMaterial(10, 1, 10, 10, 1, 10, 1.4);
+			else
+				this.cohesiveMaterial = cohesiveMaterial;
 
 			double effectiveAreaY = area;
 			double effectiveAreaZ = area;
@@ -298,7 +304,7 @@ namespace MGroup.Multiscale
 			}
 
 			// Create Cohesive Material
-			var cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
+			//var cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
 			//var cohesiveMaterial = new BondSlipCohMatUniaxial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
 
 			// Create Beam3D Section
@@ -352,14 +358,40 @@ namespace MGroup.Multiscale
 		{
 			if (readFromText == false)
 			{
-				//var cntNodeIds = new int[numberOfCnts * 2];
-				//var cntNodeCoordinates = new double[numberOfCnts * 2, 3];
-				//var cntElementConnectivity = new int[numberOfCnts, 2];
+				var cntNodeIds = new int[numberOfCnts * 2];
+				var cntNodeCoordinates = new double[numberOfCnts * 2, 3];
+				var cntElementConnectivity = new int[numberOfCnts, 2];
+				
+				var cntGenerator = new RandomCntGeometryGenerator(1, cntLength, numberOfCnts, L01, L02, L03, hexa1, hexa2, hexa3);
+				(cntNodeIds, cntNodeCoordinates, cntElementConnectivity) = cntGenerator.GenerateCnts();
+				//return (new int[5], new double[5, 5], new int[5, 5]);
+				//var SpecPath = "E:\\Desktop\\MsolveOutputs\\matlabGeneratedCNTs\\RVE_configurations";
+				//string CNTgeometryFileName = "nodes_5_wf.txt";
+				//string CNTconnectivityFileName = "connectivity_5_wf.txt";
+				//string fileNameOnlyCNTgeometryFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTgeometryFileName));
+				//string fileNameOnlyCNTconnectivityFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTconnectivityFileName));
+				//string extension = Path.GetExtension(CNTgeometryFileName);
+				//string extension_2 = Path.GetExtension(CNTconnectivityFileName);
 
-				//var cntGenerator = new RandomCntGeometryGenerator(1, cntLength, numberOfCnts, L01, L02, L03, hexa1, hexa2, hexa3);
-				//(cntNodeIds, cntNodeCoordinates, cntElementConnectivity) = cntGenerator.GenerateCnts();
-				//return (cntNodeIds, cntNodeCoordinates, cntElementConnectivity);
-				return (new int[5], new double[5, 5], new int[5, 5]);
+				//string currentCNTconnectivityFileName = string.Format("{0}{1}", fileNameOnlyCNTconnectivityFileName, extension_2);
+
+				//string currentCNTgeometryFileName = string.Format("{0}{1}", fileNameOnlyCNTgeometryFileName, extension);
+
+				//using (var writer = new StreamWriter(currentCNTgeometryFileName, false))
+				//{
+				//	for (int i = 0; i < cntNodeCoordinates.GetLength(0); i++)
+				//	{
+				//		writer.WriteLine($"{cntNodeIds[i]} {cntNodeCoordinates[i, 0]} {cntNodeCoordinates[i, 1]} {cntNodeCoordinates[i, 2]}");
+				//	}
+				//}
+				//using (var writer = new StreamWriter(currentCNTconnectivityFileName, false))
+				//{
+				//	for (int i = 0; i < cntElementConnectivity.GetLength(0); i++)
+				//	{
+				//		writer.WriteLine($"{cntElementConnectivity[i, 0]} {cntElementConnectivity[i, 1]}");
+				//	}
+				//}
+				return (cntNodeIds, cntNodeCoordinates, cntElementConnectivity);
 			}
 			else
 			{
@@ -368,12 +400,12 @@ namespace MGroup.Multiscale
 				var cntElementConnectivity = new int[numberOfCnts, 2];
 
 				//var BasePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-				var SpecPath = "..\\..\\RveTemplates\\Input\\Output_Input Files";
+				var SpecPath = "E:\\Desktop\\MsolveOutputs\\matlabGeneratedCNTs\\RVE_configurations";
 				//var workingDirectory = Path.Combine(BasePath, SpecPath);
 				//string workingDirectory = @"C:\Users\stefp\OneDrive\Desktop\MsolveOutputs\matlabGeneratedCNTs";
 
-				string CNTgeometryFileName = "nodes.txt";
-				string CNTconnectivityFileName = "connectivity.txt";
+				string CNTgeometryFileName = "nodes_1_wf.txt";
+				string CNTconnectivityFileName = "connectivity_1_wf.txt";
 
 				string fileNameOnlyCNTgeometryFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTgeometryFileName));
 				string fileNameOnlyCNTconnectivityFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTconnectivityFileName));
@@ -449,7 +481,7 @@ namespace MGroup.Multiscale
 					int nodeID = elementConnectivity[i1, renumbering[j]];
 					nodeSet.Add(model.NodesDictionary[nodeID]);
 				}
-				var matrixMaterialClone = (ElasticMaterial3D)this.matrixMaterial;
+				//var matrixMaterialClone = (ElasticMaterial3D)this.matrixMaterial;
 				//List<IIsotropicContinuumMaterial3D> matrixMaterialList = new List<IIsotropicContinuumMaterial3D>(); ;
 				//for (int i = 0; i < GaussLegendre3D.GetQuadratureWithOrder(2, 2, 2).IntegrationPoints.Count; i++)
 				//{
@@ -466,7 +498,7 @@ namespace MGroup.Multiscale
 				//var el = trandom.ContinuousUniform(0, 1);
 				//var elementFactory = new ContinuumElement3DFactory(matrixMaterial, commonDynamicProperties: null);
 				//IElementType e1 = elementFactory.CreateElement(CellType.Hexa8, nodeSet);
-				var elementFactory = new Multiscale.SupportiveClasses.ContinuumElement3DFactory(new ElasticMaterial3D(matrixMaterialClone.YoungModulus, matrixMaterialClone.PoissonRatio), commonDynamicProperties: null);
+				var elementFactory = new Multiscale.SupportiveClasses.ContinuumElement3DFactory((IContinuumMaterial3D)matrixMaterial.Clone(), commonDynamicProperties: null);
 				IElementType e1 = elementFactory.CreateElement(CellType.Hexa8, nodeSet);
 				//IElementType e1 = new Multiscale.SupportiveClasses.ContinuumElement3D(nodeSet, GaussLegendre3D.GetQuadratureWithOrder(2, 2, 2), matrixMaterialReadOnly, interpolation);
 				e1.ID = i1;
