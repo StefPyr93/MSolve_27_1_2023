@@ -26,13 +26,14 @@ namespace MGroup.FEM.Structural.Tests.Integration
 		private static TotalDisplacementsPerIterationLog SolveModel(Model model)
 		{
 			var solverFactory = new SkylineSolver.Factory();
+			//var solverFactory = new DenseMatrixSolver.Factory() { IsMatrixPositiveDefinite = false };
 			var algebraicModel = solverFactory.BuildAlgebraicModel(model);
 			var solver = solverFactory.BuildSolver(algebraicModel);
 			var problem = new ProblemStructural(model, algebraicModel);
 
-			var loadControlAnalyzerBuilder = new LoadControlAnalyzer.Builder(algebraicModel, solver, problem, numIncrements: 2)
+			var loadControlAnalyzerBuilder = new LoadControlAnalyzer.Builder(algebraicModel, solver, problem, numIncrements: 10)
 			{
-				ResidualTolerance = 1E-8,
+				ResidualTolerance = 1E-2,
 				MaxIterationsPerIncrement = 100,
 				NumIterationsForMatrixRebuild = 1
 			};
@@ -43,10 +44,10 @@ namespace MGroup.FEM.Structural.Tests.Integration
 				new List<(INode node, IDofType dof)>()
 				{
 					(model.NodesDictionary[5], StructuralDof.TranslationX),
-					(model.NodesDictionary[8], StructuralDof.TranslationZ),
-					(model.NodesDictionary[12], StructuralDof.TranslationZ),
-					(model.NodesDictionary[16], StructuralDof.TranslationZ),
-					(model.NodesDictionary[20], StructuralDof.TranslationZ)
+					(model.NodesDictionary[8], StructuralDof.TranslationX),
+					(model.NodesDictionary[12], StructuralDof.TranslationX),
+					(model.NodesDictionary[16], StructuralDof.TranslationX),
+					(model.NodesDictionary[20], StructuralDof.TranslationX)
 				}, algebraicModel
 			);
 

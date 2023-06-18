@@ -6,11 +6,17 @@ using MGroup.Constitutive.Structural;
 using MGroup.Constitutive.Structural.Continuum;
 using MGroup.FEM.Structural.Continuum;
 using MGroup.MSolve.Numerics.Interpolation;
+using MGroup.Constitutive.Structural.MachineLearning;
+using MGroup.MachineLearning.TensorFlow.NeuralNetworks;
+using System.IO;
+using System.Reflection;
+using System;
 
 namespace MGroup.FEM.Structural.Tests.ExampleModels
 {
 	public class Hexa8NonLinearCantileverExample
 	{
+
 		private static readonly double[,] nodeData = new double[,] {
 			{-0.250000,-0.250000,-1.000000},
 			{0.250000,-0.250000,-1.000000},
@@ -43,7 +49,20 @@ namespace MGroup.FEM.Structural.Tests.ExampleModels
 
 		public static Model CreateModel()
 		{
-			var model = new Model();
+            // these files are used to generate an already trained FeedForwardNeuralNetwork which was created using strain-stress pairs from an ElasticMaterial3D(youngModulus:20, poissonRatio:0.2)
+            string initialPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location).Split(new string[] { "\\bin" }, StringSplitOptions.None)[0];
+            var folderName = "SavedFiles";
+            var netPathName = "network_architecture_acc_strains";
+            netPathName = Path.Combine(initialPath, folderName, netPathName);
+            var weightsPathName = "trained_weights_acc_strains";
+            weightsPathName = Path.Combine(initialPath, folderName, weightsPathName);
+            var normalizationPathName = "normalization_acc_strains";
+            normalizationPathName = Path.Combine(initialPath, folderName, normalizationPathName);
+
+            var neuralNetwork = new FeedForwardNeuralNetwork();
+            neuralNetwork.LoadNetwork(netPathName, weightsPathName, normalizationPathName);
+
+            var model = new Model();
 
 			model.SubdomainsDictionary.Add(key: 0, new Subdomain(id: 0));
 
@@ -68,8 +87,10 @@ namespace MGroup.FEM.Structural.Tests.ExampleModels
 				}
 				var element = new ContinuumElement3DNonLinear(
 					nodeSet,
-					new ElasticMaterial3D(youngModulus: 1353000, poissonRatio: 0.3),
-					GaussLegendre3D.GetQuadratureWithOrder(orderXi: 3, orderEta: 3, orderZeta: 3),
+					//new NeuralNetworkMaterial3D(neuralNetwork, new double[0]),
+                    new NeuralNetworkMaterialAccumAbsStrains3D(neuralNetwork, new double[0]),
+                    //new ElasticMaterial3D(1353000, 0.3),
+                    GaussLegendre3D.GetQuadratureWithOrder(orderXi: 3, orderEta: 3, orderZeta: 3),
 					InterpolationHexa8.UniqueInstance
 				)
 				{
@@ -95,7 +116,7 @@ namespace MGroup.FEM.Structural.Tests.ExampleModels
 				(
 					model.NodesDictionary[i],
 					StructuralDof.TranslationX,
-					amount: 1 * 850d
+					amount: 1 * 0.4*0.85d
 				));
 			}
 

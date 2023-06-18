@@ -15,11 +15,14 @@ using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.Meshes;
 using MGroup.MSolve.Geometry.Coordinates;
 using MGroup.LinearAlgebra.Vectors;
-using MGroup.MSolve.Discretization.Embedding;
-using System.Linq;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
+using System.Linq;
+using MGroup.LinearAlgebra.Providers;
+using static System.Net.WebRequestMethods;
+using MGroup.MSolve.Discretization.Embedding;
 
-namespace MGroup.Multiscale.SupportiveClasses
+namespace Group.Multiscale.SupportiveClasses
 {
 	/// <summary>
 	/// Represents a continuum finite element for 3D problems. Specific elements (e.g. Hexa8, Hexa20, ...) can be created using
@@ -117,7 +120,9 @@ namespace MGroup.Multiscale.SupportiveClasses
 				double dA = jacobian.DirectDeterminant * QuadratureForConsistentMass.IntegrationPoints[gp].Weight;
 				mass.AxpyIntoThis(partial, dA);
 			}
+
 			mass.ScaleIntoThis(dynamicProperties.Density);
+			mass.MatrixSymmetry = MatrixSymmetry.Symmetric;
 			return mass;
 		}
 
@@ -137,6 +142,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 
 			double nodalMass = area * dynamicProperties.Density / Nodes.Count;
 			for (int i = 0; i < numberOfDofs; i++) lumpedMass[i, i] = nodalMass;
+			lumpedMass.MatrixSymmetry = MatrixSymmetry.Symmetric;
 
 			return lumpedMass;
 		}
@@ -148,9 +154,11 @@ namespace MGroup.Multiscale.SupportiveClasses
 			IReadOnlyList<Matrix> shapeGradientsNatural =
 				Interpolation.EvaluateNaturalGradientsAtGaussPoints(QuadratureForStiffness);
 
+			var s = MatrixSymmetry.Symmetric;
 			for (int gp = 0; gp < QuadratureForStiffness.IntegrationPoints.Count; ++gp)
 			{
 				IMatrixView constitutive = materialsAtGaussPoints[gp].ConstitutiveMatrix;
+				s = s == MatrixSymmetry.Symmetric ? constitutive.MatrixSymmetry : s;
 				var jacobian = new IsoparametricJacobian3D(Nodes, shapeGradientsNatural[gp]);
 				Matrix shapeGradientsCartesian =
 					jacobian.TransformNaturalDerivativesToCartesian(shapeGradientsNatural[gp]);
@@ -161,6 +169,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 				stiffness.AxpyIntoThis(partial, dA);
 			}
 
+			stiffness.MatrixSymmetry = s;
 			return DofEnumerator.GetTransformedMatrix(stiffness);
 		}
 
@@ -217,7 +226,8 @@ namespace MGroup.Multiscale.SupportiveClasses
 			int numberOfDofs = 3 * Nodes.Count;
 			var Forces = Vector.CreateZero(numberOfDofs);
 			IReadOnlyList<Matrix> shapeGradientsNatural =
-				Interpolation.EvaluateNaturalGradientsAtGaussPoints(QuadratureForStiffness);	
+				Interpolation.EvaluateNaturalGradientsAtGaussPoints(QuadratureForStiffness);
+
 			//double[] strains = new double[6];
 			//for (int gp = 0; gp < QuadratureForStiffness.IntegrationPoints.Count; ++gp)
 			//{
@@ -242,19 +252,19 @@ namespace MGroup.Multiscale.SupportiveClasses
 				strainsVec[gpo] = deformation.Multiply(localDisplacements);
 				strainsVecMinusLastConvergedValue = new double[6]
 				{
-					strainsVec[gpo][0] - strainsVecLastConverged[gpo][0],
-					strainsVec[gpo][1] - strainsVecLastConverged[gpo][1],
-					strainsVec[gpo][2] - strainsVecLastConverged[gpo][2],
-					strainsVec[gpo][3] - strainsVecLastConverged[gpo][3],
-					strainsVec[gpo][4] - strainsVecLastConverged[gpo][4],
-					strainsVec[gpo][5] - strainsVecLastConverged[gpo][5],
+					strainsVec[gpo][0]- strainsVecLastConverged[gpo][0],
+					strainsVec[gpo][1]- strainsVecLastConverged[gpo][1],
+					strainsVec[gpo][2]- strainsVecLastConverged[gpo][2],
+					strainsVec[gpo][3]- strainsVecLastConverged[gpo][3],
+					strainsVec[gpo][4]- strainsVecLastConverged[gpo][4],
+					strainsVec[gpo][5]- strainsVecLastConverged[gpo][5]
 				};
 				lastStresses[gpo] = materialsAtGaussPoints[gpo].UpdateConstitutiveMatrixAndEvaluateResponse(strainsVecMinusLastConvergedValue);
 				//To update with total strain simplY = materialsAtGaussPoints[npoint].UpdateMaterial(strainsVec[npoint]);
 			}
 
 
-			return new Tuple<double[], double[]>(strainsVec[materialsAtGaussPoints.Count-1], lastStresses[materialsAtGaussPoints.Count - 1]);
+			return new Tuple<double[], double[]>(strainsVec[materialsAtGaussPoints.Count - 1], lastStresses[materialsAtGaussPoints.Count - 1]);
 		}
 
 		public double CalculateVolume()
@@ -287,9 +297,11 @@ namespace MGroup.Multiscale.SupportiveClasses
 
 		public IMatrix DampingMatrix()
 		{
-			IMatrix damping = BuildStiffnessMatrix();
+			var damping = BuildStiffnessMatrix().CopyToFullMatrix();
+			var m = MassMatrix();
 			damping.ScaleIntoThis(dynamicProperties.RayleighCoeffStiffness);
-			damping.AxpyIntoThis(MassMatrix(), dynamicProperties.RayleighCoeffMass);
+			damping.AxpyIntoThis(m, dynamicProperties.RayleighCoeffMass);
+			damping.MatrixSymmetry = m.MatrixSymmetry == MatrixSymmetry.Symmetric && damping.MatrixSymmetry == MatrixSymmetry.Symmetric ? MatrixSymmetry.Symmetric : MatrixSymmetry.NonSymmetric;
 			return damping;
 		}
 
@@ -310,14 +322,29 @@ namespace MGroup.Multiscale.SupportiveClasses
 		//	foreach (var material in materialsAtGaussPoints) material.ResetModified();
 		//}
 
-		public void SaveConstitutiveLawState()
+		public void SaveConstitutiveLawState(IHaveState externalState)
 		{
 			for (int npoint = 0; npoint < materialsAtGaussPoints.Count; npoint++)
 			{
 				for (int i1 = 0; i1 < 6; i1++)
 				{ strainsVecLastConverged[npoint][i1] = strainsVec[npoint][i1]; }
 			}
+
 			foreach (var m in materialsAtGaussPoints) m.CreateState();
+
+			if (externalState != null && (externalState is IHaveStateWithValues))
+			{
+				var s = (IHaveStateWithValues)externalState;
+				if (s.StateValues.ContainsKey(TransientLiterals.TIME))
+				{
+					var time = s.StateValues[TransientLiterals.TIME];
+					foreach (var m in materialsAtGaussPoints.Where(x => x is ITransientConstitutiveLaw).Select(x => (ITransientConstitutiveLaw)x))
+					{
+						m.SetCurrentTime(time);
+					}
+				}
+
+			}
 		}
 
 		public IMatrix StiffnessMatrix() => DofEnumerator.GetTransformedMatrix(BuildStiffnessMatrix());
@@ -398,28 +425,17 @@ namespace MGroup.Multiscale.SupportiveClasses
 			return shapeFunctionMatrix;
 		}
 
-		public EmbeddedNode BuildHostElementEmbeddedNode(IElementType element, INode node,
-			IEmbeddedDOFInHostTransformationVector transformation)
+		protected double[,] GetCoordinatesTranspose(IElementType element)
 		{
-			var points = GetNaturalCoordinates(element, (Node)node);
-			if (points.Length == 0) return null;
-
-			//element.EmbeddedNodes.Add(node);
-			var embeddedNode = new EmbeddedNode(node, element, transformation.GetDependentDOFTypes);
-			for (int i = 0; i < points.Length; i++) embeddedNode.Coordinates.Add(points[i]);
-			return embeddedNode;
+			double[,] nodeCoordinatesXYZ = new double[3, dofTypes.Length];
+			for (int i = 0; i < dofTypes.Length; i++)
+			{
+				nodeCoordinatesXYZ[0, i] = element.Nodes[i].X;
+				nodeCoordinatesXYZ[1, i] = element.Nodes[i].Y;
+				nodeCoordinatesXYZ[2, i] = element.Nodes[i].Z;
+			}
+			return nodeCoordinatesXYZ;
 		}
-		//public EmbeddedNode BuildHostElementEmbeddedNode(IElementType element, INode node,
-		//	IEmbeddedDOFInHostTransformationVector transformation)
-		//{
-		//	var points = GetNaturalCoordinates(element, (Node)node);
-		//	if (points.Length == 0) return null;
-
-		//	//element.EmbeddedNodes.Add(node);
-		//	var embeddedNode = new EmbeddedNode(node, element, (IList<IDofType>)transformation.GetDOFTypesOfHost((EmbeddedNode)node));
-		//	for (int i = 0; i < points.Length; i++) embeddedNode.Coordinates.Add(points[i]);
-		//	return embeddedNode;
-		//}
 
 		private double[] GetNaturalCoordinates(IElementType element, Node node)
 		{
@@ -489,140 +505,17 @@ namespace MGroup.Multiscale.SupportiveClasses
 			return naturalCoordinates.Count(x => Math.Abs(x) - 1.0 > tolerance) > 0 ? new double[0] : naturalCoordinates;
 		}
 
-		//private double[] CalcH8Shape(double fXi, double fEta, double fZeta)
-		//{
-		//	const double fSqC125 = 0.5;
-		//	double auxilliaryfXiP = (1.0 + fXi) * fSqC125;
-		//	double auxilliaryfEtaP = (1.0 + fEta) * fSqC125;
-		//	double auxilliaryfZetaP = (1.0 + fZeta) * fSqC125;
-		//	double auxilliaryfXiM = (1.0 - fXi) * fSqC125;
-		//	double auxilliaryfEtaM = (1.0 - fEta) * fSqC125;
-		//	double auxilliaryfZetaM = (1.0 - fZeta) * fSqC125;
-
-		//	double[] auxH8ShapeFunctiondata = new double[8]; // Warning: shape function data not in hexa8fixed order.
-
-		//	auxH8ShapeFunctiondata[0] = auxilliaryfXiP * auxilliaryfEtaP * auxilliaryfZetaP;
-		//	auxH8ShapeFunctiondata[1] = auxilliaryfXiM * auxilliaryfEtaP * auxilliaryfZetaP;
-		//	auxH8ShapeFunctiondata[2] = auxilliaryfXiM * auxilliaryfEtaM * auxilliaryfZetaP;
-		//	auxH8ShapeFunctiondata[3] = auxilliaryfXiP * auxilliaryfEtaM * auxilliaryfZetaP;
-		//	auxH8ShapeFunctiondata[4] = auxilliaryfXiP * auxilliaryfEtaP * auxilliaryfZetaM;
-		//	auxH8ShapeFunctiondata[5] = auxilliaryfXiM * auxilliaryfEtaP * auxilliaryfZetaM;
-		//	auxH8ShapeFunctiondata[6] = auxilliaryfXiM * auxilliaryfEtaM * auxilliaryfZetaM;
-		//	auxH8ShapeFunctiondata[7] = auxilliaryfXiP * auxilliaryfEtaM * auxilliaryfZetaM;
-		//	return auxH8ShapeFunctiondata;
-		//}
-
-		protected double[,] GetCoordinatesTranspose(IElementType element)
+		public EmbeddedNode BuildHostElementEmbeddedNode(IElementType element, INode node,
+		IEmbeddedDOFInHostTransformationVector transformation)
 		{
-			double[,] nodeCoordinatesXYZ = new double[3, dofTypes.Length];
-			for (int i = 0; i < dofTypes.Length; i++)
-			{
-				nodeCoordinatesXYZ[0, i] = element.Nodes[i].X;
-				nodeCoordinatesXYZ[1, i] = element.Nodes[i].Y;
-				nodeCoordinatesXYZ[2, i] = element.Nodes[i].Z;
-			}
-			return nodeCoordinatesXYZ;
+			var points = GetNaturalCoordinates(element, (Node)node);
+			if (points.Length == 0) return null;
+
+			//element.EmbeddedNodes.Add(node);
+			var embeddedNode = new EmbeddedNode(node, element, transformation.GetDependentDOFTypes);
+			for (int i = 0; i < points.Length; i++) embeddedNode.Coordinates.Add(points[i]);
+			return embeddedNode;
 		}
-
-		//private double[] CalcH8NablaShape(double fXi, double fEta, double fZeta)
-		//{
-		//	const double fSq125 = 0.35355339059327376220042218105242;
-		//	double[] auxilliaryfaDS = new double[24];
-
-		//	double auxilliaryfXiP = (1.0 + fXi) * fSq125;
-		//	double auxilliaryfEtaP = (1.0 + fEta) * fSq125;
-		//	double auxilliaryfZetaP = (1.0 + fZeta) * fSq125;
-		//	double auxilliaryfXiM = (1.0 - fXi) * fSq125;
-		//	double auxilliaryfEtaM = (1.0 - fEta) * fSq125;
-		//	double auxilliaryfZetaM = (1.0 - fZeta) * fSq125;
-
-		//	auxilliaryfaDS[0] = auxilliaryfEtaP * auxilliaryfZetaP;
-		//	auxilliaryfaDS[1] = -auxilliaryfEtaP * auxilliaryfZetaP;
-		//	auxilliaryfaDS[2] = -auxilliaryfEtaM * auxilliaryfZetaP;
-		//	auxilliaryfaDS[3] = auxilliaryfEtaM * auxilliaryfZetaP;
-		//	auxilliaryfaDS[4] = auxilliaryfEtaP * auxilliaryfZetaM;
-		//	auxilliaryfaDS[5] = -auxilliaryfEtaP * auxilliaryfZetaM;
-		//	auxilliaryfaDS[6] = -auxilliaryfEtaM * auxilliaryfZetaM;
-		//	auxilliaryfaDS[7] = auxilliaryfEtaM * auxilliaryfZetaM;
-
-		//	auxilliaryfaDS[8] = auxilliaryfXiP * auxilliaryfZetaP;
-		//	auxilliaryfaDS[9] = auxilliaryfXiM * auxilliaryfZetaP;
-		//	auxilliaryfaDS[10] = -auxilliaryfXiM * auxilliaryfZetaP;
-		//	auxilliaryfaDS[11] = -auxilliaryfXiP * auxilliaryfZetaP;
-		//	auxilliaryfaDS[12] = auxilliaryfXiP * auxilliaryfZetaM;
-		//	auxilliaryfaDS[13] = auxilliaryfXiM * auxilliaryfZetaM;
-		//	auxilliaryfaDS[14] = -auxilliaryfXiM * auxilliaryfZetaM;
-		//	auxilliaryfaDS[15] = -auxilliaryfXiP * auxilliaryfZetaM;
-
-		//	auxilliaryfaDS[16] = auxilliaryfXiP * auxilliaryfEtaP;
-		//	auxilliaryfaDS[17] = auxilliaryfXiM * auxilliaryfEtaP;
-		//	auxilliaryfaDS[18] = auxilliaryfXiM * auxilliaryfEtaM;
-		//	auxilliaryfaDS[19] = auxilliaryfXiP * auxilliaryfEtaM;
-		//	auxilliaryfaDS[20] = -auxilliaryfXiP * auxilliaryfEtaP;
-		//	auxilliaryfaDS[21] = -auxilliaryfXiM * auxilliaryfEtaP;
-		//	auxilliaryfaDS[22] = -auxilliaryfXiM * auxilliaryfEtaM;
-		//	auxilliaryfaDS[23] = -auxilliaryfXiP * auxilliaryfEtaM;
-
-		//	return auxilliaryfaDS;
-		//}
-
-		protected static double determinantTolerance = 0.00000001;
-		//private Tuple<double[,], double[,], double> CalcH8JDetJ(double[,] faXYZ, double[] faDS)
-		//{
-		//	double[,] auxilliaryfaJ = new double[3, 3];
-		//	auxilliaryfaJ[0, 0] = faDS[0] * faXYZ[0, 0] + faDS[1] * faXYZ[0, 1] + faDS[2] * faXYZ[0, 2] + faDS[3] * faXYZ[0, 3] + faDS[4] * faXYZ[0, 4] + faDS[5] * faXYZ[0, 5] + faDS[6] * faXYZ[0, 6] + faDS[7] * faXYZ[0, 7];
-		//	auxilliaryfaJ[0, 1] = faDS[0] * faXYZ[1, 0] + faDS[1] * faXYZ[1, 1] + faDS[2] * faXYZ[1, 2] + faDS[3] * faXYZ[1, 3] + faDS[4] * faXYZ[1, 4] + faDS[5] * faXYZ[1, 5] + faDS[6] * faXYZ[1, 6] + faDS[7] * faXYZ[1, 7];
-		//	auxilliaryfaJ[0, 2] = faDS[0] * faXYZ[2, 0] + faDS[1] * faXYZ[2, 1] + faDS[2] * faXYZ[2, 2] + faDS[3] * faXYZ[2, 3] + faDS[4] * faXYZ[2, 4] + faDS[5] * faXYZ[2, 5] + faDS[6] * faXYZ[2, 6] + faDS[7] * faXYZ[2, 7];
-		//	auxilliaryfaJ[1, 0] = faDS[8] * faXYZ[0, 0] + faDS[9] * faXYZ[0, 1] + faDS[10] * faXYZ[0, 2] + faDS[11] * faXYZ[0, 3] + faDS[12] * faXYZ[0, 4] + faDS[13] * faXYZ[0, 5] + faDS[14] * faXYZ[0, 6] + faDS[15] * faXYZ[0, 7];
-		//	auxilliaryfaJ[1, 1] = faDS[8] * faXYZ[1, 0] + faDS[9] * faXYZ[1, 1] + faDS[10] * faXYZ[1, 2] + faDS[11] * faXYZ[1, 3] + faDS[12] * faXYZ[1, 4] + faDS[13] * faXYZ[1, 5] + faDS[14] * faXYZ[1, 6] + faDS[15] * faXYZ[1, 7];
-		//	auxilliaryfaJ[1, 2] = faDS[8] * faXYZ[2, 0] + faDS[9] * faXYZ[2, 1] + faDS[10] * faXYZ[2, 2] + faDS[11] * faXYZ[2, 3] + faDS[12] * faXYZ[2, 4] + faDS[13] * faXYZ[2, 5] + faDS[14] * faXYZ[2, 6] + faDS[15] * faXYZ[2, 7];
-		//	auxilliaryfaJ[2, 0] = faDS[16] * faXYZ[0, 0] + faDS[17] * faXYZ[0, 1] + faDS[18] * faXYZ[0, 2] + faDS[19] * faXYZ[0, 3] + faDS[20] * faXYZ[0, 4] + faDS[21] * faXYZ[0, 5] + faDS[22] * faXYZ[0, 6] + faDS[23] * faXYZ[0, 7];
-		//	auxilliaryfaJ[2, 1] = faDS[16] * faXYZ[1, 0] + faDS[17] * faXYZ[1, 1] + faDS[18] * faXYZ[1, 2] + faDS[19] * faXYZ[1, 3] + faDS[20] * faXYZ[1, 4] + faDS[21] * faXYZ[1, 5] + faDS[22] * faXYZ[1, 6] + faDS[23] * faXYZ[1, 7];
-		//	auxilliaryfaJ[2, 2] = faDS[16] * faXYZ[2, 0] + faDS[17] * faXYZ[2, 1] + faDS[18] * faXYZ[2, 2] + faDS[19] * faXYZ[2, 3] + faDS[20] * faXYZ[2, 4] + faDS[21] * faXYZ[2, 5] + faDS[22] * faXYZ[2, 6] + faDS[23] * faXYZ[2, 7];
-
-		//	double auxilliaryfDet1 = auxilliaryfaJ[0, 0] * (auxilliaryfaJ[1, 1] * auxilliaryfaJ[2, 2] - auxilliaryfaJ[2, 1] * auxilliaryfaJ[1, 2]);
-		//	double auxilliaryfDet2 = -auxilliaryfaJ[0, 1] * (auxilliaryfaJ[1, 0] * auxilliaryfaJ[2, 2] - auxilliaryfaJ[2, 0] * auxilliaryfaJ[1, 2]);
-		//	double auxilliaryfDet3 = auxilliaryfaJ[0, 2] * (auxilliaryfaJ[1, 0] * auxilliaryfaJ[2, 1] - auxilliaryfaJ[2, 0] * auxilliaryfaJ[1, 1]);
-		//	double auxilliaryfDetJ = auxilliaryfDet1 + auxilliaryfDet2 + auxilliaryfDet3;
-		//	if (auxilliaryfDetJ < determinantTolerance)
-		//	{
-		//		throw new ArgumentException(
-		//			$"Jacobian determinant is negative or under tolerance ({auxilliaryfDetJ} < {determinantTolerance})."
-		//			 + " Check the order of nodes or the element geometry.");
-		//	}
-
-		//	double auxilliaryfDetInv = 1.0 / auxilliaryfDetJ;
-		//	double[,] auxilliaryfaJInv = new double[3, 3];
-		//	auxilliaryfaJInv[0, 0] = (auxilliaryfaJ[1, 1] * auxilliaryfaJ[2, 2] - auxilliaryfaJ[2, 1] * auxilliaryfaJ[1, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[1, 0] = (auxilliaryfaJ[2, 0] * auxilliaryfaJ[1, 2] - auxilliaryfaJ[1, 0] * auxilliaryfaJ[2, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[2, 0] = (auxilliaryfaJ[1, 0] * auxilliaryfaJ[2, 1] - auxilliaryfaJ[2, 0] * auxilliaryfaJ[1, 1]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[0, 1] = (auxilliaryfaJ[2, 1] * auxilliaryfaJ[0, 2] - auxilliaryfaJ[0, 1] * auxilliaryfaJ[2, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[1, 1] = (auxilliaryfaJ[0, 0] * auxilliaryfaJ[2, 2] - auxilliaryfaJ[2, 0] * auxilliaryfaJ[0, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[2, 1] = (auxilliaryfaJ[2, 0] * auxilliaryfaJ[0, 1] - auxilliaryfaJ[2, 1] * auxilliaryfaJ[0, 0]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[0, 2] = (auxilliaryfaJ[0, 1] * auxilliaryfaJ[1, 2] - auxilliaryfaJ[1, 1] * auxilliaryfaJ[0, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[1, 2] = (auxilliaryfaJ[1, 0] * auxilliaryfaJ[0, 2] - auxilliaryfaJ[0, 0] * auxilliaryfaJ[1, 2]) * auxilliaryfDetInv;
-		//	auxilliaryfaJInv[2, 2] = (auxilliaryfaJ[0, 0] * auxilliaryfaJ[1, 1] - auxilliaryfaJ[1, 0] * auxilliaryfaJ[0, 1]) * auxilliaryfDetInv;
-
-		//	return new Tuple<double[,], double[,], double>(auxilliaryfaJ, auxilliaryfaJInv, auxilliaryfDetJ);
-		//}
-
-		//double[] IEmbeddedHostElement.GetShapeFunctionsForNode(IElementType element, EmbeddedNode node)
-		//{
-		//	double[,] elementCoordinates = GetCoordinatesTranspose(element);
-		//	var shapeFunctions = CalcH8Shape(node.Coordinates[0], node.Coordinates[1], node.Coordinates[2]);
-		//	var nablaShapeFunctions = CalcH8NablaShape(node.Coordinates[0], node.Coordinates[1], node.Coordinates[2]);
-		//	var jacobian = CalcH8JDetJ(elementCoordinates, nablaShapeFunctions);
-
-		//	return new double[]
-		//	{
-		//		shapeFunctions[0], shapeFunctions[1], shapeFunctions[2], shapeFunctions[3], shapeFunctions[4], shapeFunctions[5], shapeFunctions[6], shapeFunctions[7],
-		//		nablaShapeFunctions[0], nablaShapeFunctions[1], nablaShapeFunctions[2], nablaShapeFunctions[3], nablaShapeFunctions[4], nablaShapeFunctions[5], nablaShapeFunctions[6], nablaShapeFunctions[7],
-		//		nablaShapeFunctions[8], nablaShapeFunctions[9], nablaShapeFunctions[10], nablaShapeFunctions[11], nablaShapeFunctions[12], nablaShapeFunctions[13], nablaShapeFunctions[14], nablaShapeFunctions[15],
-		//		nablaShapeFunctions[16], nablaShapeFunctions[17], nablaShapeFunctions[18], nablaShapeFunctions[19], nablaShapeFunctions[20], nablaShapeFunctions[21], nablaShapeFunctions[22], nablaShapeFunctions[23],
-		//		jacobian.Item1[0, 0], jacobian.Item1[0, 1], jacobian.Item1[0, 2], jacobian.Item1[1, 0], jacobian.Item1[1, 1], jacobian.Item1[1, 2], jacobian.Item1[2, 0], jacobian.Item1[2, 1], jacobian.Item1[2, 2],
-		//		jacobian.Item2[0, 0], jacobian.Item2[0, 1], jacobian.Item2[0, 2], jacobian.Item2[1, 0], jacobian.Item2[1, 1], jacobian.Item2[1, 2], jacobian.Item2[2, 0], jacobian.Item2[2, 1], jacobian.Item2[2, 2]
-		//	};
-		//}
 
 		double[] IEmbeddedHostElement.GetShapeFunctionsForNode(IElementType element, EmbeddedNode node)
 		{
@@ -674,23 +567,5 @@ namespace MGroup.Multiscale.SupportiveClasses
 			return returnValueList.ToArray();
 		}
 
-		public void SaveConstitutiveLawState(IHaveState externalState) => SaveConstitutiveLawState();
-
-		//public (double[] shapeFunctions, Matrix shapeFunctionGradients, IsoparametricJacobian3D jacobian) GetShapeFunctionsForNode(IElementType element, EmbeddedNode node)
-		//{
-		//	var naturalPoint = new NaturalPoint(node.Coordinates.ToArray());
-		//	var shapeFunctions = Interpolation.EvaluateFunctionsAt(naturalPoint);
-		//	var shapeFunctionGradients = Interpolation.EvaluateNaturalGradientsAt(naturalPoint);
-		//	var jacobian = new IsoparametricJacobian3D(element.Nodes.ToArray(), shapeFunctionGradients);
-		//	var shapeFunctionGradients2DArray = shapeFunctionGradients.CopyToArray2D();
-
-		//	var jacobianDirect = jacobian.DirectMatrix;
-		//	var jacobianInverse = jacobian.InverseMatrix;
-		//	var jacobianDirect2DArray = jacobianDirect.CopyToArray2D();
-		//	var jacobianInverse2DArray = jacobianInverse.CopyToArray2D();
-
-
-		//	return (shapeFunctions, shapeFunctionGradients, jacobian);
-		//}
 	}
 }

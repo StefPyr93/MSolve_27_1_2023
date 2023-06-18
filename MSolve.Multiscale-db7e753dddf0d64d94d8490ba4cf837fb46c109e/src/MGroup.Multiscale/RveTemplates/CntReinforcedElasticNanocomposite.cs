@@ -77,7 +77,7 @@ namespace MGroup.Multiscale
 
 		public CntReinforcedElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, ICohesiveZoneMaterial cohesiveMaterial = null)
 		{
-			K_el = 10; K_pl = 1; T_max = 0.00001;
+			K_el = 10; K_pl = 1; T_max = 0.1;
 			//this.matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
 			//constParameters = new double[3] { K_el, K_pl, T_max };
 			this.matrixMaterial = matrixMaterial;
@@ -136,8 +136,8 @@ namespace MGroup.Multiscale
 				this.CntMaterial = inclusionMaterial;
 
 			if (cohesiveMaterial == null)
-				//this.cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
-				this.cohesiveMaterial = new BenzeggaghKenaneCohesiveMaterial(10, 1, 10, 10, 1, 10, 1.4);
+				this.cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
+				//this.cohesiveMaterial = new BenzeggaghKenaneCohesiveMaterial(10, 1, 10, 10, 1, 10, 1.4);
 			else
 				this.cohesiveMaterial = cohesiveMaterial;
 
@@ -169,7 +169,7 @@ namespace MGroup.Multiscale
 			AddCntBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
 			//var embeddedGrouping = EmbeddedBeam3DGrouping.CreateFullyBonded(model, model.ElementsDictionary
 			//.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements)
-			//.Select(kv => kv.Value).ToArray(), true);
+			//.Select(kv => kv.Value).ToArray(), false);
 			AddCohesiveBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
 			var embeddedGrouping = EmbeddedBeam3DGrouping.CreateCohesive(model, model.ElementsDictionary
 						.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements + embeddedElements)

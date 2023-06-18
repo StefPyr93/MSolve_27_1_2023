@@ -43,7 +43,7 @@ namespace MGroup.Multiscale.Tests.RveTemplates.Tests.CntReinforcedElasticNanocom
 			var matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
 			var homogeneousRveBuilder1 =
 				new CntReinforcedElasticNanocomposite(numberOfCnts, matrixMaterial); //{ K_el = 20, K_pl = 2, T_max = 0.2, };
-			homogeneousRveBuilder1.readFromText = true;
+			homogeneousRveBuilder1.readFromText = false;
 
 			////TWO PHASE RVE BUILDER
 			//var outterMaterial = new ExponentialDamageMaterial() { youngModulus = 20, poissonRatio = 0.2, Strain_0 = 0.001, A = 1, B = 500, Veta = 1 };

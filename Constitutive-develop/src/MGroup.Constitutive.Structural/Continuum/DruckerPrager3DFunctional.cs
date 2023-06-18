@@ -264,9 +264,9 @@ namespace MGroup.Constitutive.Structural.Continuum
 		{
 			if (type == "outer")
 			{
-				heta = 3 * Math.Sin(friction) / (Math.Sqrt(3) * (3 - Math.Sin(friction)));
-				heta_d = 3 * Math.Sin(dilation) / (Math.Sqrt(3) * (3 - Math.Sin(dilation)));
-				ksi = 3 * Math.Cos(friction) / (Math.Sqrt(3) * (3 - Math.Sin(friction)));
+				heta = 6 * Math.Sin(friction) / (Math.Sqrt(3) * (3 - Math.Sin(friction)));
+				heta_d = 6 * Math.Sin(dilation) / (Math.Sqrt(3) * (3 - Math.Sin(dilation)));
+				ksi = 6 * Math.Cos(friction) / (Math.Sqrt(3) * (3 - Math.Sin(friction)));
 			}
 			else if (type == "inner")
 			{

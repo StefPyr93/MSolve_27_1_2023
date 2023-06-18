@@ -151,7 +151,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 			var predY = EvaluateResponses(testX);
 			var predYnp = np.array(predY);
 			var testYnp = np.array(testY);
-			var accuracy = new Tensor();
+			var accuracy = new Tensor(0);
 			if (classification == false)
 			{
 				accuracy = LossFunction.Call(testYnp, predYnp);

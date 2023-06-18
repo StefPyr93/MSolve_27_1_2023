@@ -71,7 +71,20 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			{
 				neuralNetworkInput[0, i] = materialParameters[i - totalStrains.Length - strainsAccumAbs.Length];
 			}
-			return Matrix.CreateFromArray(neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0]).GetSubmatrix(new int[] { 0, 1, 2, 3, 4, 5 }, new int[] { 0, 1, 2, 3, 4, 5 });
+			//TEMP
+			var TEMP = neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0];
+			for (int i = 0; i < TEMP.GetLength(0); i++)
+			{
+				for (int j = i; j < TEMP.GetLength(1) - 6; j++)
+				{
+					var temp2 = 0.5 * (TEMP[i, j] + TEMP[j, i]);
+					TEMP[i, j] = temp2;
+					TEMP[j, i] = temp2;
+				}
+			}
+			return Matrix.CreateFromArray(TEMP);
+			//TEMP
+			//return Matrix.CreateFromArray(neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0]).GetSubmatrix(new int[] { 0, 1, 2, 3, 4, 5 }, new int[] { 0, 1, 2, 3, 4, 5 });
 		}
 
 		private void CalculateNextStressStrainPoint()

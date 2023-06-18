@@ -9,6 +9,9 @@ using MGroup.Stochastic.Structural;
 using MGroup.MSolve.MultiscaleAnalysis;
 using MGroup.Multiscale;
 using MiMsolve.SolutionStrategies;
+using Accord.Statistics.Distributions.Multivariate;
+using static System.Net.Mime.MediaTypeNames;
+using ExcelDataReader;
 
 namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 {
@@ -38,8 +41,34 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 
 		private static void CheckNeuralNetworkMaterialAccuracy(FeedForwardNeuralNetwork neuralNetwork)
 		{
-			var numOfSolutions = 10;
-			var incrementsPerSolution = 40;
+			System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+			string path = "E:\\Desktop\\thess\\Διδακτορικο\\Papers\\ContactMultiscaleBumper\\ExcelStrainStressData10\\element1560Strain.xlsx";
+
+			var strainHistory = new double[6][];
+			strainHistory[0] = new double[108]; strainHistory[1] = new double[108]; strainHistory[2] = new double[108];
+			strainHistory[3] = new double[108]; strainHistory[4] = new double[108]; strainHistory[5] = new double[108];
+			using (var stream = File.Open(path, FileMode.Open, FileAccess.Read))
+			{
+				var row = 0;
+				using (var reader = ExcelReaderFactory.CreateReader(stream))
+				{
+					for (int i = 0; i < 111; i++)
+					{
+						reader.Read();
+						if (i > 2)
+						{
+							for (int j = 1; j <= 6; j++)
+							{
+								strainHistory[j - 1][row] = reader.GetDouble(j);
+							}
+							row++;
+						}
+					}
+				}
+			}
+
+			var numOfSolutions = 1;
+			var incrementsPerSolution = 108;
 			var maxLimitStrain = new double[6] { 0.05, 0.05, 0.05, 0.05, 0.05, 0.05 };
 			var minLimitStrain = new double[6] { -0.05, -0.05, -0.05, -0.05, -0.05, -0.05 };
 			var maxPerturbationStrain = new double[6] { 0.001, 0.001, 0.001, 0.001, 0.001, 0.001 };
@@ -51,16 +80,29 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 			var stressesPlastic= new double[numOfSolutions * incrementsPerSolution, 6];
 			var constitutivePlastic = new Matrix[numOfSolutions * incrementsPerSolution];
 			var TotalMacroStrain = new double[maxLimitStrain.Length];
+
 			for (int k = 0; k < numOfSolutions; k++)
 			{
 				var gp_sample = new double[maxLimitStrain.Length][];
+				var steps = new double[incrementsPerSolution + 1];
+				steps[0] = 0;
+				for (int i = 1; i < incrementsPerSolution + 1; i++)
+				{
+					steps[i] = steps[i - 1] + 0.001;
+				}
 				for (int i = 0; i < maxLimitStrain.Length; i++)
 				{
+					var rnd2 = 10 * rnd.NextDouble() - 10;
+					var percent = (rnd2 + 10) / 20;
+					var distr = new MultivariateNormalDistribution(new double[] { 300 - percent * 600 }, new double[,] { { 300 } });
+					var rnd1 = distr.Generate();
 					TotalMacroStrain[i] = rnd.NextDouble() * (maxLimitStrain[i] - minLimitStrain[i]) + minLimitStrain[i];
-					var gpSampler = new DiscreteGaussianProcess(incrementsPerSolution + 1, 0.4 * maxPerturbationStrain[i], 1.5, true, x => x / incrementsPerSolution * TotalMacroStrain[i]);
+					//var gpSampler = new DiscreteGaussianProcess(steps, 0.4 * maxPerturbationStrain[i], 1.5, true, x => x / incrementsPerSolution * TotalMacroStrain[i]);
+					var gpSampler = new DiscreteGaussianProcess(steps, 0.002, 0.00001, true, x => rnd1[0] * Math.Pow(x, 2) + rnd2 * x);// 221.3012*Math.Pow(x,2)-7.2079*x);
 					gp_sample[i] = gpSampler.Generate();
 				}
-				var plasticMaterial = new DruckerPrager3DFunctional(youngModulus: 3.5, poissonRatio: 0.4, friction: 20, dilation: 20, cohesion: 0.01, hardeningFunc: x => (0.01 + 0.01 * (1 - Math.Exp(-500 * x))));
+				//var plasticMaterial = new DruckerPrager3DFunctional(youngModulus: 3.5, poissonRatio: 0.4, friction: 20, dilation: 20, cohesion: 0.01, hardeningFunc: x => (0.01 + 0.01 * (1 - Math.Exp(-500 * x))));
+				var plasticMaterial = new VonMisesMaterial3D(youngModulus: 3.5 * 1e9, poissonRatio: 0.4, yieldStress: 0.025 * 1e9, hardeningRatio: 0.35 * 1e9);
 				var rveBuilder2 =
 					new CntReinforcedElasticNanocomposite(260, plasticMaterial); //{ K_el = 20, K_pl = 2, T_max = 0.2, };
 				rveBuilder2.readFromText = true;
@@ -76,7 +118,8 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 					for (int ii = 0; ii < MacroStrain2.Length; ii++)
 					{
 						//MacroStrain[k] = IncrMacroStrain[k] + perturbation[k];
-						MacroStrain2[ii] = gp_sample[ii][i + 1];
+						//MacroStrain2[ii] = gp_sample[ii][i + 1];
+						MacroStrain2[ii] = strainHistory[ii][i];
 					}
 					microstructure2.UpdateConstitutiveMatrixAndEvaluateResponse(new double[6] { MacroStrain2[0], MacroStrain2[1], MacroStrain2[2], MacroStrain2[3], MacroStrain2[4], MacroStrain2[5] });
 
@@ -106,7 +149,8 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 					for (int ii = 0; ii < MacroStrain.Length; ii++)
 					{
 						//MacroStrain[k] = IncrMacroStrain[k] + perturbation[k];
-						MacroStrain[ii] = gp_sample[ii][i + 1];
+						//MacroStrain[ii] = gp_sample[ii][i + 1];
+						MacroStrain[ii] = strainHistory[ii][i];
 					}
 					for (int j = 0; j < 6; j++)
 					{

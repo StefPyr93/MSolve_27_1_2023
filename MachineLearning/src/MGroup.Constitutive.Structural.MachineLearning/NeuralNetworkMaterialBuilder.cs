@@ -13,6 +13,8 @@ using MGroup.MachineLearning;
 using MiMsolve.SolutionStrategies;
 using MGroup.MachineLearning.TensorFlow.KerasLayers;
 using Tensorflow.Operations.Activation;
+using DotNumerics.Optimization.TN;
+using MGroup.Constitutive.Structural.Cohesive;
 
 //using MatlabWriter = MathNet.Numerics.Data.Matlab.MatlabWriter;
 
@@ -38,18 +40,22 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		{
 			//model properties
 			var rnd = new Random();
-			var matrixMaterial = new ElasticMaterial3D(youngModulus: 20, poissonRatio: 0.2);
-			var numOfInclusions = 0;
-			var rveBuilder = new CntReinforcedElasticNanocomposite(numOfInclusions, matrixMaterial);
-			var microstructure = new Microstructure3D<SkylineMatrix>(rveBuilder, false, 1, new SkylineSolverPrefernce());
-			var maxParameterValues = new double[2] { 20, 0.2 };
-			var minParameterValues = new double[2] { 20, 0.2 };
+			//var matrixMaterial = new ElasticMaterial3D(youngModulus: 1353000, poissonRatio: 0.30);
+			var matrixMaterial = new DruckerPrager3DFunctional(20, 0.2, 30, 30, 0.025, x => 0.025 + 2 * x);
+			var cohesiveMaterial = new BondSlipMaterial(10, 1, 100.0, 0.1, new double[2], new double[2], 1e-3);
+			var numOfInclusions = 260;
+			var rveBuilder = new CntReinforcedElasticNanocomposite(numOfInclusions, matrixMaterial, cohesiveMaterial: cohesiveMaterial);
+			rveBuilder.readFromText = true;
+			var microstructure = new Microstructure3D<SymmetricCscMatrix>(rveBuilder, false, 1, new SuiteSparseSolverPrefernce());
+			microstructure.MaxIterations = 20;
+			var maxParameterValues = new double[3] { 30, 3, 0.3 };
+			var minParameterValues = new double[3] { 0.1, 0.01, 0.001 };
 
 			//analysis properties
 			var numOfSolutions = 500;
-			var incrementsPerSolution = 5;
+			var incrementsPerSolution = 20;
 			var maxLimitStrain = new double[6] { 0.02, 0.02, 0.02, 0.02, 0.02, 0.02 };
-			var minLimitStrain = new double[6] { 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 };
+			var minLimitStrain = new double[6] { -0.02, -0.02, -0.02, -0.02, -0.02, -0.02 };
 
 			//run analyses and save input-output pairs
 			var BasePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -69,17 +75,23 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			double[][] Output = new double[numOfSolutions * incrementsPerSolution][];
 
 			//Microstructure3D<SkylineMatrix> microstructure = new Microstructure3D<SkylineMatrix>(homogeneousRveBuilder1, false, 1, new SkylineSolverPrefernce());
-
+			var checkNaN = false;
 			for (int num_solution = 0; num_solution < numOfSolutions; num_solution++)
 			{
+				checkNaN = false;
 				var parameterValues = new double[maxParameterValues.Length];
 				for (int i = 0; i < maxParameterValues.Length; i++)
 				{
 					parameterValues[i] = rnd.NextDouble() * (maxParameterValues[i] - minParameterValues[i]) + minParameterValues[i];
 				}
-				matrixMaterial = new ElasticMaterial3D(parameterValues[0], parameterValues[1]);
-				var homogeneousRveBuilder1 =
-					new CntReinforcedElasticNanocomposite(numOfInclusions, matrixMaterial); //{ K_el = 20, K_pl = 2, T_max = 0.2, };
+				//matrixMaterial = new ElasticMaterial3D(parameterValues[0], parameterValues[1]);
+				matrixMaterial = new DruckerPrager3DFunctional(20, 0.2, 30, 30, 0.025, x => 0.025 + 2 * x);
+				cohesiveMaterial = new BondSlipMaterial(parameterValues[0], parameterValues[1], 100.0, parameterValues[2], new double[2], new double[2], 1e-3);
+				rveBuilder =
+					new CntReinforcedElasticNanocomposite(numOfInclusions, matrixMaterial, cohesiveMaterial: cohesiveMaterial); //{ K_el = 20, K_pl = 2, T_max = 0.2, };
+				rveBuilder.readFromText = true;
+				microstructure = new Microstructure3D<SymmetricCscMatrix>(rveBuilder, false, 1, new SuiteSparseSolverPrefernce());
+				microstructure.MaxIterations = 20;
 
 				var MacroStrain = new double[maxLimitStrain.Length];
 				for (int i = 0; i < maxLimitStrain.Length; i++)
@@ -94,16 +106,30 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 
 					double[] IncrMacroStress = new double[6] { microstructure.Stresses[0], microstructure.Stresses[1], microstructure.Stresses[2], microstructure.Stresses[3], microstructure.Stresses[4], microstructure.Stresses[5] };
 
+					for (int ii = 0; ii < 6; ii++)
+					{
+						if (double.IsNaN(IncrMacroStress[ii]) == true)
+						{
+							checkNaN = true;
+							break;
+						}
+					}
+					if (checkNaN == true)
+					{ break; }
+
+					//if ()
+
 					microstructure.CreateState();
 
-					Input[num_solution * incrementsPerSolution + i] = new double[6] {
-																						IncrMacroStrain[0], IncrMacroStrain[1], IncrMacroStrain[2], IncrMacroStrain[3], IncrMacroStrain[4], IncrMacroStrain[5] };
+					Input[num_solution * incrementsPerSolution + i] = new double[9] {
+																						IncrMacroStrain[0], IncrMacroStrain[1], IncrMacroStrain[2], IncrMacroStrain[3], IncrMacroStrain[4], IncrMacroStrain[5], parameterValues[0], parameterValues[1], parameterValues[2] };
 					Output[num_solution * incrementsPerSolution + i] = new double[6] { IncrMacroStress[0], IncrMacroStress[1], IncrMacroStress[2], IncrMacroStress[3], IncrMacroStress[4], IncrMacroStress[5] }; //homogeneousRveBuilder1.K_el, homogeneousRveBuilder1.K_pl, homogeneousRveBuilder1.T_max,
 
 					using (var writer = new StreamWriter(inputFile, append)) // append mode to continue from previous increment
 					{
 						writer.WriteLine($"{Input[num_solution * incrementsPerSolution + i][0]}, {Input[num_solution * incrementsPerSolution + i][1]}, {Input[num_solution * incrementsPerSolution + i][2]}, " +
-							$"{Input[num_solution * incrementsPerSolution + i][3]}, {Input[num_solution * incrementsPerSolution + i][4]}, {Input[num_solution * incrementsPerSolution + i][5]}");//, {Input[num_solution * incrementsPerSolution + i][6]}, " +																																															   //$"{Input[num_solution * incrementsPerSolution + i][7]}, {Input[num_solution * incrementsPerSolution + i][8]}");
+							$"{Input[num_solution * incrementsPerSolution + i][3]}, {Input[num_solution * incrementsPerSolution + i][4]}, {Input[num_solution * incrementsPerSolution + i][5]}" +
+							$", {Input[num_solution * incrementsPerSolution + i][6]}, {Input[num_solution * incrementsPerSolution + i][7]}, {Input[num_solution * incrementsPerSolution + i][8]}");//, {Input[num_solution * incrementsPerSolution + i][6]}, " +																																															   //$"{Input[num_solution * incrementsPerSolution + i][7]}, {Input[num_solution * incrementsPerSolution + i][8]}");
 					}
 
 					using (var writer = new StreamWriter(outputFile, append)) // append mode to continue from previous increment
@@ -130,12 +156,12 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		new MGroup.MachineLearning.TensorFlow.Keras.Optimizers.Adam(dataType: Tensorflow.TF_DataType.TF_DOUBLE, learning_rate: 0.001f),
 		keras.losses.MeanSquaredError(), new INetworkLayer[]
 		{
-					new InputLayer(new int[]{6}),
-					new DenseLayer(30, ActivationType.TanH),
-					new DenseLayer(30, ActivationType.TanH),
+					new InputLayer(new int[]{9}),
+					new DenseLayer(20, ActivationType.Sigmoid),
+					new DenseLayer(20, ActivationType.Sigmoid),
 					new DenseLayer(6, ActivationType.Linear)
 		},
-		2000, batchSize: 128);
+		3000, batchSize: 128);
 
 			var BasePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 			var pathName = Path.Combine(BasePath, SpecPath);

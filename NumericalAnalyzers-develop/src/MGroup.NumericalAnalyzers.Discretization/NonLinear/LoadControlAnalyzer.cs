@@ -30,6 +30,7 @@ namespace MGroup.NumericalAnalyzers.Discretization.NonLinear
 				numIterationsForMatrixRebuild, residualTolerance)
 		{ }
 
+		public TotalDisplacementsPerIncrementLog TotalDisplacementsPerIncrementLog { get; set; }
 
 		/// <summary>
 		/// Solves the nonlinear equations and calculates the displacements vector.
@@ -94,6 +95,10 @@ namespace MGroup.NumericalAnalyzers.Discretization.NonLinear
 						provider.Reset();
 						parentAnalyzer.BuildMatrices();
 					}
+				}
+				if (TotalDisplacementsPerIncrementLog != null)
+				{
+					TotalDisplacementsPerIncrementLog.StoreDisplacements(uPlusdu);
 				}
 				Debug.WriteLine("NR {0}, first error: {1}, exit error: {2}", iteration, firstError, errorNorm);
 				SaveMaterialStateAndUpdateSolution();

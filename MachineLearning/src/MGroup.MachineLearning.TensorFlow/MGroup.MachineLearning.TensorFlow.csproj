@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -17,12 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="SciSharp.TensorFlow.Redist" Version="2.7.0" />
-    <PackageReference Include="TensorFlow.Keras" Version="0.7.0" />
-    <PackageReference Include="TensorFlow.NET" Version="0.70.1" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\..\LinearAlgebra-develop\src\MGroup.LinearAlgebra\MGroup.LinearAlgebra.csproj" />
+    <ProjectReference Include="..\..\..\TensorFlowNET.Keras\Tensorflow.Keras.csproj" />
     <ProjectReference Include="..\MGroup.MachineLearning\MGroup.MachineLearning.csproj" />
   </ItemGroup>
 

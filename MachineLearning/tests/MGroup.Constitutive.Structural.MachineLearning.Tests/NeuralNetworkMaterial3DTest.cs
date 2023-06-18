@@ -26,7 +26,7 @@ namespace MGroup.Constitutive.Structural.MachineLearning.Tests
 			neuralNetwork.LoadNetwork(netPathName, weightsPathName, normalizationPathName);
 
 			var neuralNetworkMaterial = new NeuralNetworkMaterial3D(neuralNetwork, new double[0]);
-			var elasticMaterial = new ElasticMaterial3D(20, 0.2);
+			var elasticMaterial = new ElasticMaterial3D(1353000, 0.3);
 
 			CheckNeuralNetworkMaterialAccuracy(neuralNetworkMaterial, elasticMaterial);
 		}

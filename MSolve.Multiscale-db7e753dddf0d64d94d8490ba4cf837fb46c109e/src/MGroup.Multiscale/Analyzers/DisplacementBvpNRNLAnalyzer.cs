@@ -36,7 +36,7 @@ namespace MiMsolve.multiScaleSupportiveClasses
         private readonly int increments;
         private int maxSteps = 1000;
         private int stepsForMatrixRebuild = 0;
-        private readonly double tolerance = 1e-3;
+        private readonly double tolerance = 1e-2;
         private double rhsNorm;
         private INonLinearParentAnalyzer parentAnalyzer = null;
         private readonly ISolver solver;

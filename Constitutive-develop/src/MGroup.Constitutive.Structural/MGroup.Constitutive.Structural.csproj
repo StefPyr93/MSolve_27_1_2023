@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <Compile Remove="Continuum\VonMisesMaterial3D - Copy.cs" />
-    <Compile Remove="Continuum\VonMisesMaterial3D.cs" />
+    <Compile Remove="Continuum\VonMisesMaterial3D - New.cs" />
   </ItemGroup>
 
   <ItemGroup>

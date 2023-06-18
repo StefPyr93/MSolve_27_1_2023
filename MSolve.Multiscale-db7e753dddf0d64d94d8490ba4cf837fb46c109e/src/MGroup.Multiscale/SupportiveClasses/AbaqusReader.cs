@@ -10,7 +10,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 
 	public static class AbaqusReader
 	{
-		public static (double[,] elements, double[,] nodes, double[][] sets, int[] renumbering) ReadFile(string textFile, string[] setNames = null)
+		public static (double[][,] nodes, int[][,] elements, int[][] sets, int[][] renumbering) ReadFile(string textFile, string[] setNames = null)
 		{
 			var text = File.ReadAllText(textFile);
 			text = text.ToLower();
@@ -18,27 +18,41 @@ namespace MGroup.Multiscale.SupportiveClasses
 			var indAsterisk = AllIndexesOf(text, "*");
 			var indNodes = AllIndexesOf(text, "*node");
 			var indElements = AllIndexesOf(text, "*element");
-			var sets = new double[setNames.Length][];
+			var instances = indNodes.Count;
+			var sets = new int[setNames.Length][];
 			if (setNames != null)
 			{
-				for(int i = 0; i < setNames.Length; i++) 
+				for (int i = 0; i < setNames.Length; i++)
 				{
-					var currentSetPos = AllIndexesOf(text, $"*nset, nset=\"{setNames[i]}\"");
-					var currentSet = subtexts[indAsterisk.IndexOf(currentSetPos[0])+1];
+					var currentSetPos = AllIndexesOf(text, $"*nset, nset={setNames[i].ToLower()}");
+					var currentSet = subtexts[indAsterisk.IndexOf(currentSetPos[0]) + 1];
 					var currentSetArray = To2D(GetMatrixFromString(currentSet, "\n", ",")).OfType<double>().ToArray();
 					sets[i] = RemoveZeros(currentSetArray);
 				}
 			}
-			var elementsSet = subtexts[indAsterisk.IndexOf(indElements[0]) + 1];
-			var nodesSet = subtexts[indAsterisk.IndexOf(indNodes[0]) + 1];
-			var elements = To2D(GetMatrixFromString(elementsSet, "\n", ","));
-			var nodes = To2D(GetMatrixFromString(nodesSet, "\n", ","));
-			var n1 = AllIndexesOf(elementsSet, "type=");
-			var n2 = AllIndexesOf(elementsSet, "\n");
-			var eT = elementsSet.Substring(n1[0] + 5, 4);
-			var renumbering = NodeRenumbering(eT);
-
-			return (elements, nodes, sets, renumbering);
+			var nodes = new double[instances][,];
+			var elements = new int[instances][,];
+			var renumbering = new int[instances][];
+			for (int i = 0; i < instances; i++)
+			{
+				var elementsSet = subtexts[indAsterisk.IndexOf(indElements[i]) + 1];
+				var nodesSet = subtexts[indAsterisk.IndexOf(indNodes[i]) + 1];
+				var elementsTemp = To2D(GetMatrixFromString(elementsSet, "\n", ","));
+				elements[i] = new int[elementsTemp.GetLength(0), elementsTemp.GetLength(1)];
+				for (int k = 0; k < instances; k++)
+				{
+					for (int l = 0; l < instances; l++)
+					{
+						elements[i][k, l] = (int)elementsTemp[k, l];
+					}
+				}
+				nodes[i] = To2D(GetMatrixFromString(nodesSet, "\n", ","));
+				var n1 = AllIndexesOf(elementsSet, "type=");
+				var n2 = AllIndexesOf(elementsSet, "\n");
+				var eT = elementsSet.Substring(n1[0] + 5, 4);
+				renumbering[i] = NodeRenumbering(eT);
+			}
+			return (nodes, elements, sets, renumbering);
 		}
 
 		private static List<int> AllIndexesOf(this string str, string value)
@@ -55,19 +69,23 @@ namespace MGroup.Multiscale.SupportiveClasses
 			}
 		}
 
-		private static double[] RemoveZeros(double[] source)
+		private static int[] RemoveZeros(double[] source)
 		{
-			return source.Where(i => i != 0).ToArray();
+			var array = source.Where(x => x != 0).ToArray();
+			return array.Select(x => (int)x).ToArray();
 		}
 
 		private static double[][] GetMatrixFromString(this string str, string sepRow, string sepCol)
 		{
 			var strSepRow = str.Split(sepRow);
 			var tempMatrix = new double[strSepRow.Length][];
-			var flag = new double[strSepRow.Length];
+			var flag = new int[strSepRow.Length][];
+			var totalNaN = new int[strSepRow.Length];
+			var lineFlag = new int[strSepRow.Length];
 			for (int i = 0; i < strSepRow.Length; i++)
 			{
 				var strSepCol = strSepRow[i].Split(sepCol);
+				flag[i] = new int[strSepCol.Length];
 				tempMatrix[i] = new double[strSepCol.Length];
 				for (int j = 0; j < strSepCol.Length; j++)
 				{
@@ -77,22 +95,28 @@ namespace MGroup.Multiscale.SupportiveClasses
 					else
 						tempMatrix[i][j] = double.NaN;
 					if (Double.IsNaN(tempMatrix[i][j]))
-						flag[i] = 1;
+					{
+						flag[i][j] = 1;
+						totalNaN[i]++;
+					}
 				}
+				if (totalNaN[i] < tempMatrix[i].Length)
+					lineFlag[i] = 1;
 			}
-			var totalRowsKeep = tempMatrix.GetLength(0) - (int)flag.Sum();
-			var matrix = new double[totalRowsKeep][];
+			//var totalRowsKeep = tempMatrix.GetLength(0) - flag.Sum();
+			var matrix = new double[lineFlag.Sum()][];
 			var count = 0;
-			for (int i = 0; i < tempMatrix.Length; i++)
+			for (int i = 0; i < strSepRow.Length; i++)
 			{
-				if (flag[i] == 0)
+				if (lineFlag[i] == 1)
 				{
-					matrix[count] = new double[tempMatrix[i].Length];
+					matrix[count] = new double[tempMatrix[i].Length - totalNaN[i]];
 					for (int j = 0; j < tempMatrix[i].Length; j++)
 					{
-						matrix[count][j] = tempMatrix[i][j];
+						if (Double.IsNaN(tempMatrix[i][j]) == false)
+							matrix[count][j] = tempMatrix[i][j];
 					}
-					count = count + 1;
+					count++;
 				}
 			}
 			return matrix;
@@ -125,7 +149,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 				for (int j = 0; j < tempSecondDim; j++)
 					result[i, j] = source[i][j];
 				if (tempSecondDim < SecondDim)
-					for(int j = tempSecondDim; j < SecondDim; j++)
+					for (int j = tempSecondDim; j < SecondDim; j++)
 					{
 						result[i, j] = 0;
 					}

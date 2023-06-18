@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 using MGroup.Constitutive.Structural.MachineLearning;
@@ -18,7 +18,7 @@ namespace MGroup.MachineLearning.Tests
 		public static void RunTest()
         {
 			var neuralNetworkmaterial = new NeuralNetworkMaterialBuilder();
-			neuralNetworkmaterial.GenerateStrainStressData();
+		    neuralNetworkmaterial.GenerateStrainStressData();
 			var trainedNetwork = neuralNetworkmaterial.TrainNeuralNetwork();
 
 			var BasePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);

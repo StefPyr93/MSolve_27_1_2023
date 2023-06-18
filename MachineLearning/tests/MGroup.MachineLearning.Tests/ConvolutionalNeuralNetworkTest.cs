@@ -6,6 +6,7 @@ using MGroup.MachineLearning.TensorFlow.NeuralNetworks;
 using MGroup.MachineLearning.Preprocessing;
 using MGroup.MachineLearning.TensorFlow.KerasLayers;
 using Tensorflow;
+using System.IO;
 
 namespace MGroup.MachineLearning.Tests
 {
@@ -64,10 +65,10 @@ namespace MGroup.MachineLearning.Tests
 		public static (double[,,,] trainX, double[,] trainY, double[,,,] testX, double[,] testY) PrepareData()
 		{
 			((var trainXnd, var trainYnd), (var testXnd, var testYnd)) = keras.datasets.mnist.load_data();
-			trainXnd = trainXnd["::600"];
-			trainYnd = trainYnd["::600"];
-			testXnd = testXnd["::100"];
-			testYnd = testYnd["::100"];
+			//trainXnd = trainXnd["::600"];
+			//trainYnd = trainYnd["::600"];
+			//testXnd = testXnd["::100"];
+			//testYnd = testYnd["::100"];
 			//trainYnd = np_utils.to_categorical(trainYnd, 10);
 			//testYnd = np_utils.to_categorical(testYnd, 10);
 			trainXnd = tf.expand_dims(trainXnd).numpy();
@@ -111,6 +112,17 @@ namespace MGroup.MachineLearning.Tests
 				{
 					testY[i, j] = testYnd[i, j];
 				}
+			}
+
+			using (Stream stream = File.Open("trainX", false ? FileMode.Append : FileMode.Create))
+			{
+				var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+				binaryFormatter.Serialize(stream, trainX);
+			}
+			using (Stream stream = File.Open("testX", false ? FileMode.Append : FileMode.Create))
+			{
+				var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+				binaryFormatter.Serialize(stream, testX);
 			}
 
 			return (trainX, trainY, testX, testY);

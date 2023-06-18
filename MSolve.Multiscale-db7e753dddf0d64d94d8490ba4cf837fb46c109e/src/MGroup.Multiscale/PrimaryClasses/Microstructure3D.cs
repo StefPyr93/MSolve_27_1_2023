@@ -22,6 +22,7 @@ using MiMsolve.SolutionStrategies;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace MGroup.MSolve.MultiscaleAnalysis
 {
@@ -65,6 +66,10 @@ namespace MGroup.MSolve.MultiscaleAnalysis
             tol = Math.Pow(10, -19);
             constitutiveMatrix = new double[6, 6];
         }
+
+		public int Increments { get; set; } = 1;
+		public int MaxIterations { get; set; } = 100;
+		public int IterationsForMatrixRebuild { get; set; } = 1;
 
         private GenericConstitutiveLawState currentState;
         public GenericConstitutiveLawState CurrentState
@@ -215,9 +220,9 @@ namespace MGroup.MSolve.MultiscaleAnalysis
 
             
             #region Creation of nessesary analyzers for NRNLAnalyzer and Creation of Microstructure analyzer (NRNLdevelop temporarilly) and solution ;
-            int increments = 1; int MaxIterations = 100; int IterationsForMatrixRebuild = 1;
+            int increments = Increments; int maxIterations = MaxIterations; int iterationsForMatrixRebuild = IterationsForMatrixRebuild;
             (DisplacementBvpNRNLAnalyzer microAnalyzer, ElementStructuralStiffnessProvider elementProvider) = 
-                AnalyzeMicrostructure(model, solver, increments, MaxIterations, IterationsForMatrixRebuild,
+                AnalyzeMicrostructure(model, solver, increments, maxIterations, iterationsForMatrixRebuild,
                 totalPrescribedBoundaryDisplacements, initialConvergedBoundaryDisplacements, boundaryNodes, uInitialFreeDOFDisplacementsPerSubdomain, globalAlgebraicModel, provider);
             #endregion
 
