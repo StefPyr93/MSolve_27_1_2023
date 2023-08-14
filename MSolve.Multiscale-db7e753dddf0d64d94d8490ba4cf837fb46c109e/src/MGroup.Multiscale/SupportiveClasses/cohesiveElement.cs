@@ -10,6 +10,8 @@ using MGroup.MSolve.Discretization;
 using MGroup.LinearAlgebra.Matrices;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.DataStructures;
+using MGroup.Constitutive.Structural.Continuum;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.Multiscale.SupportiveClasses
 {
@@ -496,6 +498,8 @@ namespace MGroup.Multiscale.SupportiveClasses
 
 		public int SubdomainID { get; set; }
 
+		IReadOnlyList<IConstitutiveLawWithGenericState> IElementType.MaterialsAtGaussPoints => throw new NotImplementedException();
+
 		public virtual IReadOnlyList<IReadOnlyList<IDofType>> GetElementDofTypes(IElementType element) => dofTypes;
 
         // aplopoihtika implemented mhdenikes masses gia cohesive - not implemented
@@ -535,6 +539,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 		}
 
 		public void SaveConstitutiveLawState(IHaveState externalState) => SaveConstitutiveLawState();
+		public IReadOnlyList<IContinuumMaterial3D> MaterialsAtGaussPoints() => throw new NotImplementedException();
 	}
 
 }

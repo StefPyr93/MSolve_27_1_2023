@@ -14,6 +14,7 @@ using MGroup.FEM.Structural.Helpers;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Constitutive;
 using System.Linq;
+using MGroup.Constitutive.Structural.Continuum;
 
 //TODO: move stuff to Shell8DirectionVectorUtilities
 namespace MGroup.FEM.Structural.Shells
@@ -69,7 +70,7 @@ namespace MGroup.FEM.Structural.Shells
 		public int ID { get; set; }
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
 		public IElementDofEnumerator DofEnumerator
 		{

@@ -30,6 +30,8 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		private double[] stressesNew = new double[6];
 		private double[] strainsNew = new double[6];
 		private double[] strainsAccumAbsNew = new double[6];
+		private double[] strainsPrevPrev = new double[6];
+		private double[] strainsPrev = new double[6];
 		private double[] incrementalStrains = new double[6];
 		private INeuralNetwork neuralNetwork;
 		private double[] materialParameters;
@@ -65,7 +67,7 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			}
 			for (int i = totalStrains.Length; i < totalStrains.Length + strainsAccumAbs.Length; i++)
 			{
-				neuralNetworkInput[0, i] = strainsAccumAbsNew[i - totalStrains.Length];
+				neuralNetworkInput[0, i] = strainsAccumAbs[i - totalStrains.Length];
 			}
 			for (int i = totalStrains.Length + strainsAccumAbs.Length; i < neuralNetworkInput.Length; i++)
 			{
@@ -101,7 +103,7 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			}
 			for (int i = totalStrains.Length; i < totalStrains.Length + strainsAccumAbs.Length; i++)
 			{
-				neuralNetworkInput[0, i] = strainsAccumAbsNew[i - totalStrains.Length];
+				neuralNetworkInput[0, i] = strainsAccumAbs[i - totalStrains.Length];
 			}
 			for (int i = totalStrains.Length + strainsAccumAbs.Length; i < neuralNetworkInput.Length; i++)
 			{
@@ -139,10 +141,10 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		{
 			//throw new NotImplementedException();
 			this.incrementalStrains.CopyFrom(strainsIncrement);
-			for (int i = 0; i < incrementalStrains.Length; i++)
-			{
-				this.strainsAccumAbsNew[i] = strainsAccumAbs[i] + Math.Abs(incrementalStrains[i]);
-			}
+			//for (int i = 0; i < incrementalStrains.Length; i++)
+			//{
+			//	this.strainsAccumAbsNew[i] = strainsAccumAbs[i] + Math.Abs(incrementalStrains[i]);
+			//}
 			constitutiveMatrix = GetConstitutiveMatrix();
 			this.CalculateNextStressStrainPoint();
 
@@ -177,13 +179,20 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			strains.Clear();
 			stressesNew.Clear();
 			strainsNew.Clear();
+			strainsPrevPrev.Clear();
+			strainsPrev.Clear();
 		}
 
 		public GenericConstitutiveLawState CreateState()
 		{
 			stresses.CopyFrom(stressesNew);
 			strains.CopyFrom(strainsNew);
-			strainsAccumAbs.CopyFrom(strainsAccumAbsNew);
+			strainsPrevPrev.CopyFrom(strainsPrev);
+			strainsPrev.CopyFrom(strains);
+			for (int i = 0; i < strains.Length; i++)
+			{
+				strainsAccumAbs[i] += Math.Abs(strainsPrev[i] - strainsPrevPrev[i]);
+			}
 			currentState = new GenericConstitutiveLawState(this, new[]
 			{
 				(STRESS_X, stresses[0]),

@@ -74,6 +74,7 @@ namespace MGroup.FEM.Structural.Continuum
 		public IReadOnlyList<INode> Nodes { get; }
 		public IGaussPointExtrapolation2D GaussPointExtrapolation { get; }
 		public IIsoparametricInterpolation2D Interpolation { get; }
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 
 		//public bool ConstitutiveLawModified
 		//{

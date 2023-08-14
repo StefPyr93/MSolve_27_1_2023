@@ -12,6 +12,7 @@ using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.Meshes;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.ConvectionDiffusion.Isoparametric
 {
@@ -57,6 +58,8 @@ namespace MGroup.FEM.ConvectionDiffusion.Isoparametric
 		public bool ConstitutiveLawModified => throw new NotImplementedException();
 
 		public IElementDofEnumerator DofEnumerator { get; set; } = new GenericDofEnumerator();
+
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints => throw new NotImplementedException();
 
 		public IMatrix CapacityMatrix()
 		{

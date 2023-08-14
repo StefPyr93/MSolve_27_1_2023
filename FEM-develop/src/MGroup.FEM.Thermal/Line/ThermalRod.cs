@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using MGroup.Constitutive.Thermal;
 using MGroup.LinearAlgebra.Matrices;
+using MGroup.MSolve.Constitutive;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Discretization;
 using MGroup.MSolve.Discretization.Dofs;
@@ -40,7 +41,7 @@ namespace MGroup.FEM.Thermal.Line
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
 		public CellType CellType { get; } = CellType.Line2;
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get ; }
 		public double CrossSectionArea { get; }
 		public double Length { get; }
 

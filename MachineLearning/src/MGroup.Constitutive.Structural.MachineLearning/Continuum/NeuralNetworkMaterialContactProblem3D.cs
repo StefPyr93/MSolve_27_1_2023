@@ -1,6 +1,5 @@
 using MGroup.Constitutive.Structural.Continuum;
 using MGroup.LinearAlgebra.Matrices;
-using MGroup.LinearAlgebra.Providers;
 using MGroup.MachineLearning;
 using MGroup.MSolve.Constitutive;
 using MGroup.MSolve.DataStructures;
@@ -13,8 +12,9 @@ using System.Threading.Tasks;
 
 namespace MGroup.Constitutive.Structural.MachineLearning
 {
-	public class NeuralNetworkPartialElasticMaterial3D : IIsotropicContinuumMaterial3D
+	public class NeuralNetworkMaterialContactProblem3D : IIsotropicContinuumMaterial3D
 	{
+		private const string EQUIVALENT_STRAIN = "Equivalent strain";
 		private const string STRESS_X = "Stress X";
 		private const string STRESS_Y = "Stress Y";
 		private const string STRESS_Z = "Stress Z";
@@ -24,15 +24,17 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 
 		private readonly double[] strains = new double[6];
 		private readonly double[] stresses = new double[6];
+		private readonly double[] strainsAccumAbs = new double[6];
+		private double strainsEquivalent;
+		private double strainsEquivalentPrev;
 		private Matrix constitutiveMatrix = null;
-		public double YoungModulus { get; }
-		public double PoissonRatio { get; set; }
 		private double[] stressesNew = new double[6];
 		private double[] strainsNew = new double[6];
+		private double[] strainsPrevPrev = new double[6];
+		private double[] strainsPrev = new double[6];
 		private double[] incrementalStrains = new double[6];
 		private INeuralNetwork neuralNetwork;
 		private double[] materialParameters;
-		private double elasticStrainNorm;
 		//public double[] ConstParameters { get; set; }
 		private GenericConstitutiveLawState currentState;
 
@@ -42,16 +44,13 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			set { materialParameters = value; }
 		}
 
-		public NeuralNetworkPartialElasticMaterial3D(INeuralNetwork neuralNetwork, double elasticModulus, double poissonRatio, double elasticStrainNorm, double[]? materialParameters = null)
+		public NeuralNetworkMaterialContactProblem3D(INeuralNetwork neuralNetwork, double[]? materialParameters = null)
 		{
 			this.neuralNetwork = neuralNetwork;
 			if (materialParameters != null)
 				this.materialParameters = materialParameters;
 			else
 				this.materialParameters = new double[0];
-			this.YoungModulus = elasticModulus;
-			this.PoissonRatio = poissonRatio;
-			this.elasticStrainNorm = elasticStrainNorm;
 		}
 
 		private Matrix GetConstitutiveMatrix()
@@ -61,35 +60,34 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			{
 				totalStrains[i] += incrementalStrains[i];
 			}
-			if (totalStrains.Norm2() <= elasticStrainNorm)
+			var neuralNetworkInput = new double[1, incrementalStrains.Length + strainsAccumAbs.Length + 1 + materialParameters.Length];
+			for (int i = 0; i < totalStrains.Length; i++)
 			{
-				return ElasticConstitutiveMatrix();
+				neuralNetworkInput[0, i] = totalStrains[i];
 			}
-			else
+			for (int i = totalStrains.Length; i < totalStrains.Length + strainsAccumAbs.Length; i++)
 			{
-				var neuralNetworkInput = new double[1, totalStrains.Length + materialParameters.Length];
-				for (int i = 0; i < totalStrains.Length; i++)
-				{
-					neuralNetworkInput[0, i] = totalStrains[i];
-				}
-				for (int i = totalStrains.Length; i < neuralNetworkInput.Length; i++)
-				{
-					neuralNetworkInput[0, i] = materialParameters[i - totalStrains.Length];
-				}
-				var costitutiveMatrix = Matrix.CreateFromArray(neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0]).GetSubmatrix(new int[] { 0, 1, 2, 3, 4, 5 }, new int[] { 0, 1, 2, 3, 4, 5 });
-				//TEMP
-				for (int i = 0; i < costitutiveMatrix.NumRows; i++)
-				{
-					for (int j = i; j < costitutiveMatrix.NumColumns; j++)
-					{
-						var temp2 = 0.5 * (costitutiveMatrix[i, j] + costitutiveMatrix[j, i]);
-						costitutiveMatrix[i, j] = temp2;
-						costitutiveMatrix[j, i] = temp2;
-					}
-				}
-				//TEMP
-				return costitutiveMatrix;
+				neuralNetworkInput[0, i] = strainsAccumAbs[i - totalStrains.Length];
 			}
+			neuralNetworkInput[0, totalStrains.Length + strainsAccumAbs.Length] = strainsEquivalentPrev;
+			for (int i = totalStrains.Length + strainsAccumAbs.Length + 1; i < neuralNetworkInput.Length; i++)
+			{
+				neuralNetworkInput[0, i] = materialParameters[i - totalStrains.Length - strainsAccumAbs.Length];
+			}
+			//TEMP
+			var networkGradient = neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0];
+			for (int i = 0; i < incrementalStrains.Length; i++)
+			{
+				for (int j = i; j < incrementalStrains.Length; j++)
+				{
+					var temp2 = 0.5 * (networkGradient[i, j] + networkGradient[j, i]);
+					networkGradient[i, j] = temp2;
+					networkGradient[j, i] = temp2;
+				}
+			}
+			return Matrix.CreateFromArray(networkGradient);
+			//TEMP
+			//return Matrix.CreateFromArray(neuralNetwork.EvaluateResponseGradients(neuralNetworkInput)[0]).GetSubmatrix(new int[] { 0, 1, 2, 3, 4, 5 }, new int[] { 0, 1, 2, 3, 4, 5 });
 		}
 
 		private void CalculateNextStressStrainPoint()
@@ -99,61 +97,24 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			{
 				totalStrains[i] += incrementalStrains[i];
 			}
-			if (totalStrains.Norm2() <= elasticStrainNorm)
+			var neuralNetworkInput = new double[1, incrementalStrains.Length + strainsAccumAbs.Length + 1 + materialParameters.Length];
+			for (int i = 0; i < totalStrains.Length; i++)
 			{
-				var elasticConstitutiveMatrix = ElasticConstitutiveMatrix();
-				var stressesElastic = new double[6];
-				for (int i = 0; i < 6; i++)
-				{
-					stressesElastic[i] = this.stresses[i];
-					for (int j = 0; j < 6; j++)
-					{
-						stressesElastic[i] += elasticConstitutiveMatrix[i, j] * incrementalStrains[j];
-					}
-				}
-
-				this.stressesNew = stressesElastic;
-				this.strainsNew = totalStrains.Copy();
+				neuralNetworkInput[0, i] = totalStrains[i];
 			}
-			else
+			for (int i = totalStrains.Length; i < totalStrains.Length + strainsAccumAbs.Length; i++)
 			{
-				var neuralNetworkInput = new double[1, totalStrains.Length + materialParameters.Length];
-				for (int i = 0; i < totalStrains.Length; i++)
-				{
-					neuralNetworkInput[0, i] = totalStrains[i];
-				}
-				for (int i = totalStrains.Length; i < neuralNetworkInput.Length; i++)
-				{
-					neuralNetworkInput[0, i] = materialParameters[i - totalStrains.Length];
-				}
-				var stressesTotal = neuralNetwork.EvaluateResponses(neuralNetworkInput);
-				this.stressesNew = new double[6] { stressesTotal[0, 0], stressesTotal[0, 1], stressesTotal[0, 2], stressesTotal[0, 3], stressesTotal[0, 4], stressesTotal[0, 5] };
-				this.strainsNew = totalStrains.Copy();
+				neuralNetworkInput[0, i] = strainsAccumAbs[i - totalStrains.Length];
 			}
-		}
-
-		private Matrix ElasticConstitutiveMatrix()
-		{
-			double fE1 = YoungModulus / (double)(1 + PoissonRatio);
-			double fE2 = fE1 * PoissonRatio / (double)(1 - 2 * PoissonRatio);
-			double fE3 = fE1 + fE2;
-			double fE4 = fE1 * 0.5;
-			var afE = Matrix.CreateZero(6, 6);
-			afE.MatrixSymmetry = MatrixSymmetry.Symmetric;
-			afE[0, 0] = fE3;
-			afE[0, 1] = fE2;
-			afE[0, 2] = fE2;
-			afE[1, 0] = fE2;
-			afE[1, 1] = fE3;
-			afE[1, 2] = fE2;
-			afE[2, 0] = fE2;
-			afE[2, 1] = fE2;
-			afE[2, 2] = fE3;
-			afE[3, 3] = fE4;
-			afE[4, 4] = fE4;
-			afE[5, 5] = fE4;
-
-			return afE;
+			neuralNetworkInput[0, totalStrains.Length + strainsAccumAbs.Length] = strainsEquivalentPrev;
+			for (int i = totalStrains.Length + strainsAccumAbs.Length + 1; i < neuralNetworkInput.Length; i++)
+			{
+				neuralNetworkInput[0, i] = materialParameters[i - totalStrains.Length - strainsAccumAbs.Length];
+			}
+			var networkOutput = neuralNetwork.EvaluateResponses(neuralNetworkInput);
+			this.stressesNew = new double[6] { networkOutput[0, 0], networkOutput[0, 1], networkOutput[0, 2], networkOutput[0, 3], networkOutput[0, 4], networkOutput[0, 5] };
+			strainsEquivalent = networkOutput[0, 6];
+			this.strainsNew = totalStrains.Copy();
 		}
 
 		#region IFiniteElementMaterial Members
@@ -183,6 +144,10 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		{
 			//throw new NotImplementedException();
 			this.incrementalStrains.CopyFrom(strainsIncrement);
+			//for (int i = 0; i < incrementalStrains.Length; i++)
+			//{
+			//	this.strainsAccumAbsNew[i] = strainsAccumAbs[i] + Math.Abs(incrementalStrains[i]);
+			//}
 			constitutiveMatrix = GetConstitutiveMatrix();
 			this.CalculateNextStressStrainPoint();
 
@@ -204,9 +169,9 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 		/// <returns>The created material clone</returns>
 		object ICloneable.Clone() => Clone();
 
-		public NeuralNetworkMaterial3D Clone()
+		public NeuralNetworkMaterialContactProblem3D Clone()
 		{
-			return new NeuralNetworkMaterial3D(neuralNetwork, materialParameters);
+			return new NeuralNetworkMaterialContactProblem3D(neuralNetwork, materialParameters);
 		}
 
 		public void ClearState()
@@ -217,14 +182,26 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			strains.Clear();
 			stressesNew.Clear();
 			strainsNew.Clear();
+			strainsPrevPrev.Clear();
+			strainsPrev.Clear();
+			strainsEquivalent = 0;
+			strainsEquivalentPrev = 0;
 		}
 
 		public GenericConstitutiveLawState CreateState()
 		{
 			stresses.CopyFrom(stressesNew);
 			strains.CopyFrom(strainsNew);
+			strainsPrevPrev.CopyFrom(strainsPrev);
+			strainsPrev.CopyFrom(strains);
+			strainsEquivalentPrev = strainsEquivalent;
+			for (int i = 0; i < strains.Length; i++)
+			{
+				strainsAccumAbs[i] += Math.Abs(strainsPrev[i] - strainsPrevPrev[i]);
+			}
 			currentState = new GenericConstitutiveLawState(this, new[]
 			{
+				(EQUIVALENT_STRAIN, strainsEquivalent),
 				(STRESS_X, stresses[0]),
 				(STRESS_Y, stresses[1]),
 				(STRESS_Z, stresses[2]),
@@ -242,6 +219,7 @@ namespace MGroup.Constitutive.Structural.MachineLearning
 			set
 			{
 				currentState = value;
+				strainsEquivalent = currentState.StateValues[EQUIVALENT_STRAIN];
 				stresses[0] = currentState.StateValues[STRESS_X];
 				stresses[1] = currentState.StateValues[STRESS_Y];
 				stresses[2] = currentState.StateValues[STRESS_Z];

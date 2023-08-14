@@ -7,6 +7,7 @@ using MGroup.MSolve.Constitutive;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Discretization;
 using MGroup.MSolve.Discretization.Dofs;
+using MGroup.MSolve.Discretization.Embedding;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.MultiscaleAnalysis.Interfaces;
 using MGroup.MSolve.Solution;
@@ -37,7 +38,7 @@ namespace MGroup.MSolve.MultiscaleAnalysis
         private IAlgebraicStrategy<TMatrix> algebraicStrategy;
         public GlobalAlgebraicModel<TMatrix> globalAlgebraicModel { get; private set; }
         private ISolver solver;
-        public Model model { get; private set; }
+        public Model model { get; set; }
         //private readonly Dictionary<int, Node> nodesDictionary = new Dictionary<int, Node>();
         private Dictionary<int, INode> boundaryNodes { get; set; }
          Dictionary<int, IElementType> boundaryElements;
@@ -138,10 +139,27 @@ namespace MGroup.MSolve.MultiscaleAnalysis
         public object Clone()
         {
             int new_rve_id = rnd1.Next(1, database_size + 1);
-            return new Microstructure3D<TMatrix>(rveBuilder.Clone(new_rve_id), EstimateOnlyLinearResponse, database_size, algebraicStrategy);
-        }
+			var microstructure = new Microstructure3D<TMatrix>(rveBuilder.Clone(new_rve_id), EstimateOnlyLinearResponse, database_size, algebraicStrategy);
+			{
+				model = (Model)this.model.Clone();
+				(solver, globalAlgebraicModel) = algebraicStrategy.GetSolver(model);
+				provider = new ProblemStructural(model, globalAlgebraicModel);
+			}
+			return microstructure;
+			//return new Microstructure3D<TMatrix>(rveBuilder.Clone(new_rve_id), EstimateOnlyLinearResponse, database_size, algebraicStrategy)
+			//{
+			//	model = (Model)model.Clone(),
+			//	//matrices_not_initialized = false,
+			//};
+			//microstructure.model = (Model)this.model.Clone();
+			//microstructure.boundaryNodes = this.boundaryNodes;
+			//microstructure.boundaryElements = this.boundaryElements;
+			//microstructure.volume = this.volume;
+			//microstructure.scaleTransitions = this.scaleTransitions;
+			//microstructure.model.ConnectDataStructures();
+		}
 
-        public Dictionary<int, INode> BoundaryNodesDictionary
+		public Dictionary<int, INode> BoundaryNodesDictionary
         {
             get { return boundaryNodes; }
         }
@@ -531,6 +549,22 @@ namespace MGroup.MSolve.MultiscaleAnalysis
         //    PrintUtilities.WriteToFile(d2W_dfdf,  String.Concat(string0, @"d2W_dfdf.txt"));
         //    PrintUtilities.WriteToFile(Cijrs, String.Concat(string0, @"Cijrs.txt"));
         //}
+
+		public double CalculateHomogenizedInternalVariable(string stateVariableName)
+		{
+			double stateValue = 0;
+			int totalGaussPoints = 0;
+			foreach (var element in model.ElementsDictionary.Where(x => x.Value is IEmbeddedHostElement).Select(x => x.Value))
+			{ 
+				foreach (var gaussPointMaterial in element.MaterialsAtGaussPoints)
+				{
+					stateValue += gaussPointMaterial.CurrentState.StateValues.GetValueOrDefault(stateVariableName);
+					totalGaussPoints++;
+				}
+			}
+			stateValue = stateValue / totalGaussPoints;
+			return stateValue;
+		}
         #endregion
 
 

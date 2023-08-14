@@ -78,9 +78,11 @@ namespace MGroup.FEM.Structural.Continuum
 
 		public CellType CellType => Interpolation.CellType;
 		public IElementDofEnumerator DofEnumerator { get; set; } = new GenericDofEnumerator();
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
 		public IGaussPointExtrapolation3D GaussPointExtrapolation { get; }
 		public IReadOnlyList<IReadOnlyList<IDofType>> GetElementDofTypes() => dofTypes;
+
 
 		public int ID { get; set; }
 		public int SubdomainID { get; set; }

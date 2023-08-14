@@ -10,6 +10,7 @@ using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.PorousMedia.Elements
 {
@@ -210,6 +211,8 @@ namespace MGroup.FEM.PorousMedia.Elements
 		public IReadOnlyList<INode> Nodes { get; }
 
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
+
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints => throw new NotImplementedException();
 
 		public IReadOnlyList<IReadOnlyList<IDofType>> GetElementDofTypes() => dofTypes;
 

@@ -14,6 +14,7 @@ using MGroup.FEM.Structural.Helpers;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Constitutive;
 using System.Linq;
+using MGroup.Constitutive.Structural.Continuum;
 
 //TODO: current nodal coordinates should be managed by the analyzer, instead of each element calculting and storing them independently. The same applies for direction vectors of shells. 
 //TODO: direction vectors creation and update could be handled by a dedicated class that will be composed into this element. Which element would update them then?
@@ -89,7 +90,7 @@ namespace MGroup.FEM.Structural.Embedding
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
 		public CellType CellType { get; } = CellType.Unknown;
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
 
 		public IElementDofEnumerator DofEnumerator

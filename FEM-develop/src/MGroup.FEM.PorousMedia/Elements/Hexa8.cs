@@ -12,6 +12,7 @@ using MGroup.MSolve.Discretization.Embedding;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.PorousMedia.Elements
 {
@@ -145,6 +146,8 @@ namespace MGroup.FEM.PorousMedia.Elements
 		public IReadOnlyList<INode> Nodes { get; }
 
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
+
+		IReadOnlyList<IConstitutiveLawWithGenericState> IElementType.MaterialsAtGaussPoints => throw new NotImplementedException();
 
 		public virtual IReadOnlyList<IReadOnlyList<IDofType>> GetElementDofTypes() => dofTypes;
 
@@ -677,6 +680,8 @@ namespace MGroup.FEM.PorousMedia.Elements
 
 			return naturalCoordinates.Count(x => Math.Abs(x) - 1.0 > tolerance) > 0 ? new double[0] : naturalCoordinates;
 		}
+
+		public IReadOnlyList<IContinuumMaterial3D> MaterialsAtGaussPoints() => materialsAtGaussPoints;
 
 		#endregion
 	}

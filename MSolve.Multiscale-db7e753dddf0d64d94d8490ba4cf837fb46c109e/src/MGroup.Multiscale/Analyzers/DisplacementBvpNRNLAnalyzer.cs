@@ -241,7 +241,7 @@ namespace MiMsolve.multiScaleSupportiveClasses
                 }
                 Debug.WriteLine("NR {0}, first error: {1}, exit error: {2}", step, firstError, errorNorm);
                 UpdateSolution();
-                SaveMaterialState();
+                //SaveMaterialState();
             }
             CopySolutionToSubdomains();
             DateTime end = DateTime.Now;

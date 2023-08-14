@@ -6,6 +6,7 @@ using MGroup.Constitutive.Structural.Continuum;
 using MGroup.Constitutive.Structural.Line;
 using MGroup.LinearAlgebra.Matrices;
 using MGroup.LinearAlgebra.Vectors;
+using MGroup.MSolve.Constitutive;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Discretization;
 using MGroup.MSolve.Discretization.Dofs;
@@ -631,6 +632,8 @@ namespace MGroup.Multiscale.SupportiveClasses
 
 		public int SubdomainID { get; set; }
 
+		IReadOnlyList<IConstitutiveLawWithGenericState> IElementType.MaterialsAtGaussPoints => throw new NotImplementedException();
+
 		public IReadOnlyList<Matrix> EvaluateN3ShapeFunctionsReorganized(IQuadrature1D quadrature)
 		{
 			var cachedN3AtGPs = new Dictionary<IQuadrature1D, IReadOnlyList<Matrix>>();
@@ -669,5 +672,6 @@ namespace MGroup.Multiscale.SupportiveClasses
 		}
 
 		public void SaveConstitutiveLawState(IHaveState externalState) => SaveConstitutiveLawState();
+		public IReadOnlyList<IContinuumMaterial3D> MaterialsAtGaussPoints() => throw new NotImplementedException();
 	}
 }

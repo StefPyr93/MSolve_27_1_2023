@@ -43,8 +43,9 @@ namespace MGroup.Stochastic.Structural
 					covariance[i, j] = Math.Pow(std, 2) * Math.Exp(-Math.Pow(steps[i] - steps[j], 2) / (2 * Math.Pow(corLength, 2)));
 				}
 			}
-			var mvnDistr = new MultivariateNormalDistribution(mean, covariance);
-			response = mvnDistr.Generate();
+			//var mvnDistr = new MultivariateNormalDistribution(mean, covariance);
+			//response = mvnDistr.Generate();
+			response = MultivariateNormalDistribution.Generate(1, mean, covariance)[0];
 			var init_response = response[0];
 			if (zeroInitialValue == true)
 			{

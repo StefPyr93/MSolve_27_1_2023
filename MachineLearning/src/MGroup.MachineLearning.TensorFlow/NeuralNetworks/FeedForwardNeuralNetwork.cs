@@ -73,7 +73,7 @@ namespace MGroup.MachineLearning.TensorFlow.NeuralNetworks
 			CreateModel();
 
 			model.compile(loss: LossFunction, optimizer: Optimizer, metrics: new[] { "accuracy" });
-            model.fit(this.trainX, this.trainY, batch_size: BatchSize, epochs: Epochs, shuffle: false);
+            model.fit(this.trainX, this.trainY, batch_size: BatchSize, epochs: Epochs, shuffle: true);
 
             if (testX != null && testY != null)
             {

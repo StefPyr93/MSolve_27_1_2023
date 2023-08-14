@@ -10,6 +10,7 @@ using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.Discretization.Meshes;
 using MGroup.Constitutive.Structural.Line;
 using MGroup.MSolve.DataStructures;
+using MGroup.Constitutive.Structural.Continuum;
 
 namespace MGroup.FEM.Structural.Line
 {
@@ -65,7 +66,7 @@ namespace MGroup.FEM.Structural.Line
 		}
 
 		public CellType CellType { get; } = CellType.Line2;
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get; }
 		public abstract void SaveGeometryState();
 		public abstract void UpdateState(double[] incrementalNodeDisplacements);
 

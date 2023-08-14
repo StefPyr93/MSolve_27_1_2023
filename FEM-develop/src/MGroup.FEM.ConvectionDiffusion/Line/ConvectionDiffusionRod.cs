@@ -8,6 +8,7 @@ using MGroup.MSolve.Discretization;
 using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Embedding;
 using MGroup.MSolve.Discretization.Entities;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.ConvectionDiffusion.Line
 {
@@ -53,6 +54,8 @@ namespace MGroup.FEM.ConvectionDiffusion.Line
 		public IElementDofEnumerator DofEnumerator { get; set; } = new GenericDofEnumerator();
 
 		public IList<EmbeddedNode> EmbeddedNodes { get; } = new List<EmbeddedNode>();
+
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints => throw new NotImplementedException();
 
 		public IMatrix CapacityMatrix()
 		{

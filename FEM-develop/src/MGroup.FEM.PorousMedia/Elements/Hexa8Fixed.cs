@@ -11,6 +11,7 @@ using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Embedding;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
 
 //TODO: get rid of Hexa8.cs
 
@@ -128,6 +129,8 @@ namespace MGroup.FEM.PorousMedia.Elements
 		public IReadOnlyList<INode> Nodes { get; }
 
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
+
+		IReadOnlyList<IConstitutiveLawWithGenericState> IElementType.MaterialsAtGaussPoints => throw new NotImplementedException();
 
 		public virtual IReadOnlyList<IReadOnlyList<IDofType>> GetElementDofTypes() => dofTypes;
 
@@ -546,7 +549,7 @@ namespace MGroup.FEM.PorousMedia.Elements
 		//{
 		//	foreach (IContinuumMaterial3D material in materialsAtGaussPoints) material.ResetModified();
 		//}
-
+		public IReadOnlyList<IContinuumMaterial3D> MaterialsAtGaussPoints() => materialsAtGaussPoints;
 		#endregion
 
 		#region IEmbeddedHostElement Members

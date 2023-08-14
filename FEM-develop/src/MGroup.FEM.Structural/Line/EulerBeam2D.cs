@@ -7,6 +7,8 @@ using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.DataStructures;
+using MGroup.Constitutive.Structural.Continuum;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.Structural.Line
 {
@@ -48,6 +50,7 @@ namespace MGroup.FEM.Structural.Line
 		public IReadOnlyList<INode> Nodes { get; }
 
 		public CellType CellType { get; } = CellType.Line2;
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get ; }
 
 		public ElementDimensions ElementDimensions => ElementDimensions.TwoD;
 

@@ -9,6 +9,8 @@ using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.Embedding;
 using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.DataStructures;
+using MGroup.Constitutive.Structural.Continuum;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.Structural.Line
 {
@@ -82,7 +84,7 @@ namespace MGroup.FEM.Structural.Line
 		}
 
 		public CellType CellType { get; } = CellType.Line2;
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get ; }
 		private void InitializeDOFsWhenNoRotations()
 		{
 			if (rotNodes[0] == null && rotNodes[1] == null) return;

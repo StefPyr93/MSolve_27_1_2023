@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MGroup.LinearAlgebra.Matrices;
+using MGroup.MSolve.Constitutive;
 using MGroup.MSolve.DataStructures;
 using MGroup.MSolve.Discretization.BoundaryConditions;
 using MGroup.MSolve.Discretization.Dofs;
@@ -30,6 +31,7 @@ namespace MGroup.MSolve.Discretization
         double[] CalculateResponseIntegral();
         double[] CalculateResponseIntegralForLogging(double[] localDisplacements);
         IMatrix PhysicsMatrix();
+		IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get; }
 
 		public bool MapNodalBoundaryConditionsToElementVector(IEnumerable<INodalBoundaryCondition<IDofType>> nodalBoundaryConditions, double[] elementVector)
 		{

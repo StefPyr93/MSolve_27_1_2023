@@ -28,9 +28,9 @@ namespace MGroup.Multiscale
 {
 	public class CntReinforcedElasticNanocomposite : IRVEbuilder
 	{
-		int hexa1 = 10;
-		int hexa2 = 10;
-		int hexa3 = 10;
+		int hexa1 = 3;
+		int hexa2 = 3;
+		int hexa3 = 3;
 
 		double L01 = 100;
 		double L02 = 100;
@@ -39,15 +39,15 @@ namespace MGroup.Multiscale
 		IIsotropicContinuumMaterial3D matrixMaterial;
 		IIsotropicContinuumMaterial3D inclusionMaterial;
 		ICohesiveZoneMaterial cohesiveMaterial;
-		int hostElements { get; set; }
-		int embeddedElements { get; set; }
-		int hostNodes { get; set; }
-		int embeddedNodes { get; set; }
+		int hostElements;
+		int embeddedElements;
+		int hostNodes;
+		int embeddedNodes;
 
 		// cnt paramaters
 		IIsotropicContinuumMaterial3D CntMaterial;
 		int numberOfCnts;
-		int cntLength = 50;
+		int cntLength = 90;
 		// define mechanical properties
 		private double youngModulus = 1.0;//1.051e12; // 5490; // 
 		private double shearModulus = 1.0;//0.45e12; // 871; // 
@@ -56,16 +56,16 @@ namespace MGroup.Multiscale
 		double inertiaY = 100.18; //1058.55;
 		double inertiaZ = 100.18; //1058.55;1058.55;
 		double torsionalInertia = 68.77; //496.38;
-		double effectiveAreaY;
-		double effectiveAreaZ;
+		double effectiveAreaY = 694.77;
+		double effectiveAreaZ = 694.77;
 		int subdomainID = 0;
 
 		// Cohesive Zone mechanical properties
 		//double t_max = 0.05;
 		//double K_coh = 10.0;
-		public double K_el { get; set; }
-		public double K_pl { get; set; }
-		public double T_max { get; set; }
+		//public double K_el { get; set; }
+		//public double K_pl { get; set; }
+		//public double T_max { get; set; }
 
 		private double[] constParameters;
 
@@ -73,11 +73,11 @@ namespace MGroup.Multiscale
 		List<INode> elementNodesClone;
 		List<INode> elementNodesBeam;
 
-		public bool readFromText { get; set; }
+		public bool readFromText;
 
 		public CntReinforcedElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, ICohesiveZoneMaterial cohesiveMaterial = null)
 		{
-			K_el = 10; K_pl = 1; T_max = 0.1;
+			var K_el = 10; var K_pl = 1; var T_max = 0.1;
 			//this.matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
 			//constParameters = new double[3] { K_el, K_pl, T_max };
 			this.matrixMaterial = matrixMaterial;
@@ -149,39 +149,49 @@ namespace MGroup.Multiscale
 
 		public Tuple<Model, Dictionary<int, INode>, double> GetModelAndBoundaryNodes()
 		{
-			(int[] NodeIds, double[,] node_coords) = GetHexaRveNodesData();
-			int[,] elementConnectivity = GetHexaRveConnectivity();
+			var boundaryNodes = new Dictionary<int, INode>();
+			if (model == null)
+			{
+				(int[] NodeIds, double[,] node_coords) = GetHexaRveNodesData();
+				int[,] elementConnectivity = GetHexaRveConnectivity();
 
-			model = new Model();
-			model.SubdomainsDictionary[0] = new Subdomain(0);
-			AddHexaElements(model, NodeIds, node_coords, elementConnectivity);
+				model = new Model();
+				model.SubdomainsDictionary[0] = new Subdomain(0);
+				AddHexaElements(model, NodeIds, node_coords, elementConnectivity);
 
-			//var hostElements = model.EnumerateElements().Count() - 1;
-			//var hostNodes = model.EnumerateNodes().Count();
+				//var hostElements = model.EnumerateElements().Count() - 1;
+				//var hostNodes = model.EnumerateNodes().Count();
 
-			hostNodes = model.NodesDictionary.Count;
-			embeddedNodes = 2 * numberOfCnts;
-			hostElements = model.ElementsDictionary.Count;
-			embeddedElements = numberOfCnts;
+				hostNodes = model.NodesDictionary.Count;
+				embeddedNodes = 2 * numberOfCnts;
+				hostElements = model.ElementsDictionary.Count;
+				embeddedElements = numberOfCnts;
 
-			(int[] cntNodeIds, double[,] cntNodeCoords, int[,] cntElementConnectivity) = GetCntBeamsNodesData(hostNodes, hostElements, readFromText);
+				(int[] cntNodeIds, double[,] cntNodeCoords, int[,] cntElementConnectivity) = GetCntBeamsNodesData(hostNodes, hostElements, readFromText);
 
-			AddCntBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
-			//var embeddedGrouping = EmbeddedBeam3DGrouping.CreateFullyBonded(model, model.ElementsDictionary
-			//.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements)
-			//.Select(kv => kv.Value).ToArray(), false);
-			AddCohesiveBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
-			var embeddedGrouping = EmbeddedBeam3DGrouping.CreateCohesive(model, model.ElementsDictionary
-						.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements + embeddedElements)
-						.Select(kv => kv.Value).ToArray(), true);
+				AddCntBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
+				var embeddedGrouping = EmbeddedBeam3DGrouping.CreateFullyBonded(model, model.ElementsDictionary
+				.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements)
+				.Select(kv => kv.Value).ToArray(), true);
+				//AddCohesiveBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
+				//var embeddedGrouping = EmbeddedBeam3DGrouping.CreateCohesive(model, model.ElementsDictionary
+				//			.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements + embeddedElements)
+				//			.Select(kv => kv.Value).ToArray(), true);
 
-			//var paraviewEmbedded =
-			//new ParaviewEmbedded3D(model, null, Path.Combine(Directory.GetCurrentDirectory(), "ParaviewCNT"));
-			//paraviewEmbedded.CreateParaviewFile();
+				//var paraviewEmbedded =
+				//new ParaviewEmbedded3D(model, null, Path.Combine(Directory.GetCurrentDirectory(), "ParaviewCNT"));
+				//paraviewEmbedded.CreateParaviewFile();
 
-			var boundaryNodesIds = GetBoundaryNodeIds();
-			boundaryNodesIds.Sort();
-			Dictionary<int, INode> boundaryNodes = boundaryNodesIds.ToDictionary(t => t, t => model.NodesDictionary[t]);
+				var boundaryNodesIds = GetBoundaryNodeIds();
+				boundaryNodesIds.Sort();
+				boundaryNodes = boundaryNodesIds.ToDictionary(t => t, t => model.NodesDictionary[t]);
+			}
+			else
+			{
+				var boundaryNodesIds = GetBoundaryNodeIds();
+				boundaryNodesIds.Sort();
+				boundaryNodes = boundaryNodesIds.ToDictionary(t => t, t => model.NodesDictionary[t]);
+			}
 			return new Tuple<Model, Dictionary<int, INode>, double>(model, boundaryNodes, L01 * L02 * L03);
 		}
 
@@ -439,6 +449,10 @@ namespace MGroup.Multiscale
 						double nodeZ = double.Parse(bits[3]);
 						cntNodeIds[i] = nodeID;
 						cntNodeCoordinates[i, 0] = nodeX; cntNodeCoordinates[i, 1] = nodeY; cntNodeCoordinates[i, 2] = nodeZ;
+						//TEMP
+						cntNodeIds[i] = hostNodes + i;
+						//TEMP
+
 					}
 				}
 				using (TextReader reader = File.OpenText(currentCNTconnectivityFileName))
@@ -451,6 +465,9 @@ namespace MGroup.Multiscale
 						int node1 = int.Parse(bits[0]); // matrixNodes + CNTnodes
 						int node2 = int.Parse(bits[1]); // matrixNodes + CNTnodes
 						cntElementConnectivity[i, 0] = node1; cntElementConnectivity[i, 1] = node2;
+						//TEMP
+						cntElementConnectivity[i, 0] = hostNodes + 2 * i; cntElementConnectivity[i, 1] = hostNodes + 2 * i + 1;
+						//TEMP
 					}
 				}
 				return (cntNodeIds, cntNodeCoordinates, cntElementConnectivity);
@@ -606,33 +623,13 @@ namespace MGroup.Multiscale
 			return new CntReinforcedElasticNanocomposite(cnts, matrixMaterial, inclusionMaterial, cohesiveMaterial);
 		}
 
-		public void UpdateCohesiveMaterial()
+		public object Clone()
 		{
-			// define mechanical properties
-
-			double mi = 8.0;
-			double ni = 8.0;
-			double thickness_CNT = 0.34;
-			double a = 0.241;
-			double diameter_CNT = (a / Math.PI) * Math.Sqrt(Math.Pow(ni, 2) + ni * mi + Math.Pow(mi, 2));
-			double radius_CNT = diameter_CNT / 2.0;
-			double radius_CNT_outer = radius_CNT + (thickness_CNT / 2);
-			double CntPerimeter = 2.0 * Math.PI * radius_CNT_outer;
-
-			// Create Cohesive Material
-			//var cohesiveMaterial = new BondSlipCohMatUniaxial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
-			var cohesiveMaterial = new BondSlipMaterial(K_el, K_pl, 100.0, T_max, new double[2], new double[2], 1e-3);
-
-
-			// Create Beam3D Section
-			var beamSection = new BeamSection3D(area, inertiaY, inertiaZ, torsionalInertia, effectiveAreaY, effectiveAreaZ);
-
-			for (int i = 0; i < numberOfCnts; i++)
+			var rveBuilder = new CntReinforcedElasticNanocomposite(numberOfCnts, matrixMaterial, inclusionMaterial, cohesiveMaterial)
 			{
-				int elementID = i + (hostElements + embeddedElements);
-				model.ElementsDictionary[elementID] = new CohesiveBeam3DToBeam3D((List<INode>)model.ElementsDictionary[elementID].Nodes, (ICohesiveZoneMaterial)cohesiveMaterial, GaussLegendre1D.GetQuadratureWithOrder(2), elementNodesBeam,
-				elementNodesClone, matrixMaterial, 1, beamSection, CntPerimeter);
-			}
+			};
+			rveBuilder.model = (Model)this.model.Clone();
+			return rveBuilder;
 		}
 	}
 }

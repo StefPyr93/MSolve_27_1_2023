@@ -87,7 +87,7 @@ namespace Group.Multiscale.SupportiveClasses
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
 		public IIsoparametricInterpolation3D Interpolation { get; }
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 		//public bool ConstitutiveLawModified
 		//{
 		//	get
@@ -566,6 +566,5 @@ namespace Group.Multiscale.SupportiveClasses
 
 			return returnValueList.ToArray();
 		}
-
 	}
 }

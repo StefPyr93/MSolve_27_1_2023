@@ -440,6 +440,17 @@ namespace MGroup.Constitutive.Structural.Continuum
 			incrementalStrains.CopyFrom(strainsIncrement);
 			this.CalculateNextStressStrainPoint();
 
+			currentState = new GenericConstitutiveLawState(this, new[]
+{
+				(EQUIVALENT_STRAIN, strainsEquivalent),
+				(STRESS_X, stresses[0]),
+				(STRESS_Y, stresses[1]),
+				(STRESS_Z, stresses[2]),
+				(STRESS_XY, stresses[3]),
+				(STRESS_XZ, stresses[4]),
+				(STRESS_YZ, stresses[5]),
+			});
+
 			return stressesNew;
 		}
 

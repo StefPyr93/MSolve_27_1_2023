@@ -15,6 +15,7 @@ using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Meshes;
 using MGroup.MSolve.Geometry.Coordinates;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
 
 //TODO: Is there any point in having different material properties per Gauss point?
 namespace MGroup.FEM.Thermal.Isoparametric
@@ -49,7 +50,7 @@ namespace MGroup.FEM.Thermal.Isoparametric
 		public int ID { get; set; }
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get ; }
 		public IGaussPointExtrapolation2D GaussPointExtrapolation { get; }
 		public IIsoparametricInterpolation2D Interpolation { get; }
 		public IQuadrature2D QuadratureForConsistentMass { get; }

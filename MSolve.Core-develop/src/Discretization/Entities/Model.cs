@@ -18,14 +18,14 @@ using MGroup.MSolve.AnalysisWorkflow.Transient;
 
 namespace MGroup.MSolve.Discretization.Entities
 {
-	public class Model : IModel
+	public class Model : IModel, ICloneable
 	{
-		public Dictionary<int, INode> NodesDictionary { get; } = new Dictionary<int, INode>();
-		public Dictionary<int, IElementType> ElementsDictionary { get; } = new Dictionary<int, IElementType>();
-		public IList<IBoundaryConditionSet<IDofType>> BoundaryConditions { get; } = new List<IBoundaryConditionSet<IDofType>>();
-		public IList<IInitialConditionSet<IDofType>> InitialConditions { get; } = new List<IInitialConditionSet<IDofType>>();
+		public Dictionary<int, INode> NodesDictionary { get;  set; } = new Dictionary<int, INode>();
+		public Dictionary<int, IElementType> ElementsDictionary { get;  set; } = new Dictionary<int, IElementType>();
+		public IList<IBoundaryConditionSet<IDofType>> BoundaryConditions { get;  set; } = new List<IBoundaryConditionSet<IDofType>>();
+		public IList<IInitialConditionSet<IDofType>> InitialConditions { get;  set; } = new List<IInitialConditionSet<IDofType>>();
 		public int NumSubdomains => SubdomainsDictionary.Count;
-		public Dictionary<int, Subdomain> SubdomainsDictionary { get; } = new Dictionary<int, Subdomain>();
+		public Dictionary<int, Subdomain> SubdomainsDictionary { get;  set; } = new Dictionary<int, Subdomain>();
 
 		// Warning: This is called by the analyzer, so that the user does not have to call it explicitly. However, it is must be 
 		// called explicitly before the AutomaticDomainDecompositioner is used.
@@ -108,6 +108,17 @@ namespace MGroup.MSolve.Discretization.Entities
 			//ElementMassAccelerationLoads.Clear();
 			//MassAccelerationHistoryLoads.Clear();
 			//MassAccelerationLoads.Clear();
+		}
+
+		public object Clone()
+		{
+			return new Model
+			{
+				BoundaryConditions = this.BoundaryConditions.ToList(),
+				SubdomainsDictionary = this.SubdomainsDictionary.ToDictionary(x => x.Key, x => x.Value),
+				ElementsDictionary = this.ElementsDictionary.ToDictionary(x => x.Key, x => x.Value),
+				NodesDictionary = this.NodesDictionary.ToDictionary(x => x.Key, x => x.Value),
+			};
 		}
 
 		private void RemoveInactiveNodalLoads()

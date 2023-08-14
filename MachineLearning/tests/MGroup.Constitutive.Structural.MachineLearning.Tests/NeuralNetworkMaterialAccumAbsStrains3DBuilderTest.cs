@@ -18,7 +18,7 @@ namespace MGroup.MachineLearning.Tests
 		public static void RunTest()
 		{
 			var neuralNetworkmaterial = new NeuralNetworkMaterialAccumAbsStrains3DBuilder();
-			neuralNetworkmaterial.GenerateStrainStressData();
+			//neuralNetworkmaterial.GenerateStrainStressData();
 			var trainedNetwork = neuralNetworkmaterial.TrainNeuralNetwork();
 
 			var BasePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);

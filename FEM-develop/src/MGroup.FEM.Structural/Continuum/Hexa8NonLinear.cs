@@ -67,7 +67,7 @@ namespace MGroup.FEM.Structural.Continuum
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
 		public CellType CellType { get; } = CellType.Hexa8;
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get => materialsAtGaussPoints; }
 		public ElementDimensions ElementDimensions => ElementDimensions.ThreeD;
 
 		public IElementDofEnumerator DofEnumerator

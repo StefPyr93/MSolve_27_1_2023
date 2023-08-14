@@ -12,6 +12,7 @@ using MGroup.MSolve.Discretization.Dofs;
 using MGroup.MSolve.Discretization.Entities;
 using MGroup.MSolve.Discretization.Meshes;
 using MGroup.MSolve.DataStructures;
+using MGroup.MSolve.Constitutive;
 
 namespace MGroup.FEM.Thermal.Isoparametric
 {
@@ -41,7 +42,7 @@ namespace MGroup.FEM.Thermal.Isoparametric
 		public int ID { get; set; }
 		public int SubdomainID { get; set; }
 		public IReadOnlyList<INode> Nodes { get; }
-
+		public IReadOnlyList<IConstitutiveLawWithGenericState> MaterialsAtGaussPoints { get ; }
 		public IGaussPointExtrapolation3D GaussPointExtrapolation { get; }
 		public IIsoparametricInterpolation3D Interpolation { get; }
 		public IQuadrature3D QuadratureForConsistentMass { get; }

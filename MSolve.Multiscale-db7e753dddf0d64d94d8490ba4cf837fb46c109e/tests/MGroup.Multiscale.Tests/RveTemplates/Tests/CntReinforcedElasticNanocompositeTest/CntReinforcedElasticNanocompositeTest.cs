@@ -34,16 +34,16 @@ namespace MGroup.Multiscale.Tests.RveTemplates.Tests.CntReinforcedElasticNanocom
 
 			bool append = false;
 
-			int numberOfCnts = 50;
+			int numberOfCnts = 100;
 			int solutions = 1;
-			int increments_per_solution = 5;
+			int increments_per_solution = 3;
 			double[][] Input = new double[solutions * increments_per_solution][];
 			double[][] Output = new double[solutions * increments_per_solution][];
 
 			var matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
 			var homogeneousRveBuilder1 =
 				new CntReinforcedElasticNanocomposite(numberOfCnts, matrixMaterial); //{ K_el = 20, K_pl = 2, T_max = 0.2, };
-			homogeneousRveBuilder1.readFromText = false;
+			homogeneousRveBuilder1.readFromText = true;
 
 			////TWO PHASE RVE BUILDER
 			//var outterMaterial = new ExponentialDamageMaterial() { youngModulus = 20, poissonRatio = 0.2, Strain_0 = 0.001, A = 1, B = 500, Veta = 1 };
@@ -62,7 +62,7 @@ namespace MGroup.Multiscale.Tests.RveTemplates.Tests.CntReinforcedElasticNanocom
 
 			for (int num_solution = 0; num_solution < solutions; num_solution++)
 			{
-				var maxstrain = 0.1;
+				var maxstrain = 0.01;
 				var MacroStrain = new double[6] { maxstrain, -0.2 * maxstrain, -0.2 * maxstrain, 0.0, 0.0, 0.0 };
 				//var MacroStrain = new double[6] { maxstrain, -0.2 * maxstrain, -0.2 * maxstrain, 0.05 * maxstrain, 0.05 * maxstrain, -0.05 * maxstrain };
 				//var MacroStrain = new double[6]
