@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using CSparse.Storage;
+using System.Xml.Linq;
 //using Troschuetz.Random;
 
 namespace MGroup.Multiscale.SupportiveClasses
@@ -21,8 +23,10 @@ namespace MGroup.Multiscale.SupportiveClasses
 		private readonly int numElemWidth;
 		private readonly int numElemHeight;
 		private int iNode;
+		private double[] randVector;
 
 		public bool periodicInclusions = false;
+		public double[,] coordinates;
 
 		public RandomCntGeometryGenerator(int numberOfElementsPerCnt, double cntLength, int numberOfCnts,
 		double matrixLength, double matrixWidth, double matrixHeight, int numElemLength, int numElemWidth, int numElemHeight)
@@ -42,7 +46,7 @@ namespace MGroup.Multiscale.SupportiveClasses
 			this.numElemHeight = numElemHeight;
 		}
 
-		public (int[] nodeIds, double[,] nodeCoordinates, int[,] elementConnectivity) GenerateCnts()
+		public (int[] nodeIds, double[,] nodeCoordinates, int[,] elementConnectivity) GenerateCnts(double[,] coordinates = null, bool periodicInclusions = false)
 		{
 			var random = new Random();
 			var numberOfNodesPerCnt = numberOfElementsPerCnt + 1;
@@ -54,61 +58,91 @@ namespace MGroup.Multiscale.SupportiveClasses
 			var position = 0;
 			for (int indexCnt = 0; indexCnt < numberOfCnts; indexCnt++)
 			{
+				bool state = true;
 				var iNode0 = indexCnt * numberOfNodesPerCnt;
+				var iNode1 = 2 * indexCnt;
 				//nodalCoordinates[iNode0] = new double[3];
-				nodalCoordinates[iNode0, 0] = random.NextDouble() * (matrixLength / 2 - (-matrixLength / 2)) + (-matrixLength / 2);
-				nodalCoordinates[iNode0, 1] = random.NextDouble() * (matrixHeight / 2 - (-matrixHeight / 2)) + (-matrixHeight / 2);
-				nodalCoordinates[iNode0, 2] = random.NextDouble() * (matrixWidth / 2 - (-matrixWidth / 2)) + (-matrixWidth / 2);
-				nodeIds[position] = countNode;
-				countNode++;
-				position++;
-
-				for (int indexElement = 0; indexElement < numberOfElementsPerCnt; indexElement++)
+				if (coordinates != null)
 				{
-					iNode = indexCnt * numberOfNodesPerCnt + indexElement;
-					//if (indexElement == 0)
-					//{
+					nodalCoordinates[iNode0, 0] = coordinates[iNode1, 0];
+					nodalCoordinates[iNode0, 1] = coordinates[iNode1, 1];
+					nodalCoordinates[iNode0, 2] = coordinates[iNode1, 2];
+					randVector = new double[coordinates.GetLength(1)];
+					randVector[0] = coordinates[iNode1 + 1, 0] - coordinates[iNode1, 0];
+					randVector[1] = coordinates[iNode1 + 1, 1] - coordinates[iNode1, 1];
+					randVector[2] = coordinates[iNode1 + 1, 2] - coordinates[iNode1, 2];
+					var normValue = Math.Sqrt(randVector[0] * randVector[0] + randVector[1] * randVector[1] + randVector[2] * randVector[2]);
+					randVector[0] = randVector[0] / normValue; randVector[1] = randVector[1] / normValue; randVector[2] = randVector[2] / normValue;
+				}
+				else
+				{
+					nodalCoordinates[iNode0, 0] = random.NextDouble() * (matrixLength / 2 - (-matrixLength / 2)) + (-matrixLength / 2);
+					nodalCoordinates[iNode0, 1] = random.NextDouble() * (matrixHeight / 2 - (-matrixHeight / 2)) + (-matrixHeight / 2);
+					nodalCoordinates[iNode0, 2] = random.NextDouble() * (matrixWidth / 2 - (-matrixWidth / 2)) + (-matrixWidth / 2);
 					var randNormalVec = new double[3];
 					for (int k = 0; k < 3; k++)
 					{
 						randNormalVec[k] = Math.Sqrt(-2.0 * Math.Log(random.NextDouble())) * Math.Sin(2.0 * Math.PI * random.NextDouble());
 					}
-					var randVector = new double[3] { randNormalVec[0], randNormalVec[1], randNormalVec[2] };
+					randVector = new double[3] { randNormalVec[0], randNormalVec[1], randNormalVec[2] };
 					var normValue = Math.Sqrt(randVector[0] * randVector[0] + randVector[1] * randVector[1] + randVector[2] * randVector[2]);
 					randVector[0] = randVector[0] / normValue; randVector[1] = randVector[1] / normValue; randVector[2] = randVector[2] / normValue;
-					//}
-					//else
-					//{
-					//}
-					var xNode = new double(); var yNode = new double(); var zNode = new double();
-					if (periodicInclusions == false)
+					var xNode = nodalCoordinates[iNode0, 0] + randVector[0] * cntLength;
+					var yNode = nodalCoordinates[iNode0, 1] + randVector[1] * cntLength;
+					var zNode = nodalCoordinates[iNode0, 2] + randVector[2] * cntLength;
+					if (xNode > matrixLength / 2 || xNode < -matrixLength / 2 ||
+						yNode > matrixHeight / 2 || yNode < -matrixHeight / 2 ||
+						zNode > matrixWidth / 2 || zNode < -matrixWidth / 2)
 					{
-						xNode = nodalCoordinates[iNode, 0] + randVector[0] * cntLength / numberOfElementsPerCnt;
-						yNode = nodalCoordinates[iNode, 1] + randVector[1] * cntLength / numberOfElementsPerCnt;
-						zNode = nodalCoordinates[iNode, 2] + randVector[2] * cntLength / numberOfElementsPerCnt;
-						if (xNode > matrixLength / 2 || xNode < -matrixLength / 2 ||
-							yNode > matrixHeight / 2 || yNode < -matrixHeight / 2 ||
-							zNode > matrixWidth / 2 || zNode < -matrixWidth / 2)
+						indexCnt = indexCnt - 1;
+						continue;
+					}
+				}
+
+				for (int indexElement = 0; indexElement < numberOfElementsPerCnt; indexElement++)
+				{
+					iNode = indexCnt * numberOfNodesPerCnt + indexElement;
+					var xNode = new double(); var yNode = new double(); var zNode = new double();
+					if (coordinates != null)
+					{
+						if (periodicInclusions == false)
 						{
-							indexElement -= 1;
-							continue;
+							xNode = nodalCoordinates[iNode, 0] + randVector[0] * cntLength / numberOfElementsPerCnt;
+							yNode = nodalCoordinates[iNode, 1] + randVector[1] * cntLength / numberOfElementsPerCnt;
+							zNode = nodalCoordinates[iNode, 2] + randVector[2] * cntLength / numberOfElementsPerCnt;
+						}
+						else
+						{
+							(xNode, yNode, zNode) = CreatePeriodicInclusion(nodalCoordinates, randVector);
 						}
 					}
 					else
 					{
-						(xNode, yNode, zNode) = CreatePeriodicInclusion(nodalCoordinates, randVector);
+						if (periodicInclusions == false)
+						{
+							xNode = nodalCoordinates[iNode, 0] + randVector[0] * cntLength / numberOfElementsPerCnt;
+							yNode = nodalCoordinates[iNode, 1] + randVector[1] * cntLength / numberOfElementsPerCnt;
+							zNode = nodalCoordinates[iNode, 2] + randVector[2] * cntLength / numberOfElementsPerCnt;
+						}
+						else
+						{
+							(xNode, yNode, zNode) = CreatePeriodicInclusion(nodalCoordinates, randVector);
+						}
 					}
 					//var distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
 					var elementId = indexCnt * numberOfElementsPerCnt + indexElement;
-					elementConnectivity[elementId, 0] = countNode - 1;
-					elementConnectivity[elementId, 1] = countNode;
+					elementConnectivity[elementId, 0] = countNode;
+					elementConnectivity[elementId, 1] = countNode + 1;
 					nodalCoordinates[iNode + 1, 0] = xNode;
 					nodalCoordinates[iNode + 1, 1] = yNode;
 					nodalCoordinates[iNode + 1, 2] = zNode;
 					nodeIds[position] = countNode;
 					countNode++;
-					position++;
+					position++;					
 				}
+				nodeIds[position] = countNode;
+				countNode++;
+				position++;
 			}
 			return (nodeIds, nodalCoordinates, elementConnectivity);
 		}

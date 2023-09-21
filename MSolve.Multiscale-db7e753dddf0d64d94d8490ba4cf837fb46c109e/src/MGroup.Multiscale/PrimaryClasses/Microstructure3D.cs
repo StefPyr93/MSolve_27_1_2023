@@ -501,61 +501,61 @@ namespace MGroup.MSolve.MultiscaleAnalysis
             throw new NotImplementedException();
             //TODO implement tihs
         }
-        //private void PrintMethodsForDebug(double[][] KfpDq, double[][] f2_vectors, double[][] f3_vectors, double[][] KppDqVectors, double[][] f4_vectors, double[,] DqCondDq, double[,] d2W_dfdf, double[,] Cijrs)
-        //{
-        //    string string0 = @"C:\Users\turbo-x\Desktop\notes_elegxoi\REFERENCE_kanonikh_gewmetria_2\REF2_10__000_renu_new_multiple_algorithms_check_develop_1GrSh_correct_coh_CHECK_integration\d2\";
+		//private void PrintMethodsForDebug(double[][] KfpDq, double[][] f2_vectors, double[][] f3_vectors, double[][] KppDqVectors, double[][] f4_vectors, double[,] DqCondDq, double[,] d2W_dfdf, double[,] Cijrs)
+		//{
+		//    string string0 = @"C:\Users\turbo-x\Desktop\notes_elegxoi\REFERENCE_kanonikh_gewmetria_2\REF2_10__000_renu_new_multiple_algorithms_check_develop_1GrSh_correct_coh_CHECK_integration\d2\";
 
-        //    string string1 = String.Concat(string0, @"KfpDq_{0}.txt");
+		//    string string1 = String.Concat(string0, @"KfpDq_{0}.txt");
 
-        //    for (int i2 = 0; i2 < KfpDq.GetLength(0); i2++)
-        //    {
-        //        string path = string.Format(string1, (i2 + 1).ToString());
-        //        Vector data = new Vector(KfpDq[i2]);
-        //        data.WriteToFile(path);
-        //    }
+		//    for (int i2 = 0; i2 < KfpDq.GetLength(0); i2++)
+		//    {
+		//        string path = string.Format(string1, (i2 + 1).ToString());
+		//        Vector data = new Vector(KfpDq[i2]);
+		//        data.WriteToFile(path);
+		//    }
 
-        //    string string2 = String.Concat(string0, @"KffInvKfpDq_{0}.txt");
+		//    string string2 = String.Concat(string0, @"KffInvKfpDq_{0}.txt");
 
 
 
-        //    for (int i2 = 0; i2 < f2_vectors.GetLength(0); i2++)
-        //    {
-        //        string path = string.Format(string2, (i2 + 1).ToString());
-        //        Vector data = new Vector(f2_vectors[i2]);
-        //        data.WriteToFile(path);
-        //    }
+		//    for (int i2 = 0; i2 < f2_vectors.GetLength(0); i2++)
+		//    {
+		//        string path = string.Format(string2, (i2 + 1).ToString());
+		//        Vector data = new Vector(f2_vectors[i2]);
+		//        data.WriteToFile(path);
+		//    }
 
-        //    string string3 = String.Concat(string0, @"f3_vectors_{0}.txt");
-        //    string string4 = String.Concat(string0, @"KppDqVectors_{0}.txt");
-        //    string string5 = String.Concat(string0, @"f4_vectors_{0}.txt");
+		//    string string3 = String.Concat(string0, @"f3_vectors_{0}.txt");
+		//    string string4 = String.Concat(string0, @"KppDqVectors_{0}.txt");
+		//    string string5 = String.Concat(string0, @"f4_vectors_{0}.txt");
 
-        //    for (int i2 = 0; i2 < f2_vectors.GetLength(0); i2++)
-        //    {
-        //        string path = string.Format(string3, (i2 + 1).ToString());
-        //        Vector data = new Vector(f3_vectors[i2]);
-        //        data.WriteToFile(path);
+		//    for (int i2 = 0; i2 < f2_vectors.GetLength(0); i2++)
+		//    {
+		//        string path = string.Format(string3, (i2 + 1).ToString());
+		//        Vector data = new Vector(f3_vectors[i2]);
+		//        data.WriteToFile(path);
 
-        //        path = string.Format(string4, (i2 + 1).ToString());
-        //        data = new Vector(KppDqVectors[i2]);
-        //        data.WriteToFile(path);
+		//        path = string.Format(string4, (i2 + 1).ToString());
+		//        data = new Vector(KppDqVectors[i2]);
+		//        data.WriteToFile(path);
 
-        //        path = string.Format(string5, (i2 + 1).ToString());
-        //        data = new Vector(f4_vectors[i2]);
-        //        data.WriteToFile(path);
+		//        path = string.Format(string5, (i2 + 1).ToString());
+		//        data = new Vector(f4_vectors[i2]);
+		//        data.WriteToFile(path);
 
-        //    }
+		//    }
 
-        //    PrintUtilities.WriteToFile(DqCondDq, String.Concat(string0, @"DqCondDq.txt"));
-        //    PrintUtilities.WriteToFile(d2W_dfdf,  String.Concat(string0, @"d2W_dfdf.txt"));
-        //    PrintUtilities.WriteToFile(Cijrs, String.Concat(string0, @"Cijrs.txt"));
-        //}
-
+		//    PrintUtilities.WriteToFile(DqCondDq, String.Concat(string0, @"DqCondDq.txt"));
+		//    PrintUtilities.WriteToFile(d2W_dfdf,  String.Concat(string0, @"d2W_dfdf.txt"));
+		//    PrintUtilities.WriteToFile(Cijrs, String.Concat(string0, @"Cijrs.txt"));
+		//}
+		#endregion
 		public double CalculateHomogenizedInternalVariable(string stateVariableName)
 		{
 			double stateValue = 0;
 			int totalGaussPoints = 0;
 			foreach (var element in model.ElementsDictionary.Where(x => x.Value is IEmbeddedHostElement).Select(x => x.Value))
-			{ 
+			{
 				foreach (var gaussPointMaterial in element.MaterialsAtGaussPoints)
 				{
 					stateValue += gaussPointMaterial.CurrentState.StateValues.GetValueOrDefault(stateVariableName);
@@ -565,10 +565,8 @@ namespace MGroup.MSolve.MultiscaleAnalysis
 			stateValue = stateValue / totalGaussPoints;
 			return stateValue;
 		}
-        #endregion
 
-
-    }
+	}
 	
 
 

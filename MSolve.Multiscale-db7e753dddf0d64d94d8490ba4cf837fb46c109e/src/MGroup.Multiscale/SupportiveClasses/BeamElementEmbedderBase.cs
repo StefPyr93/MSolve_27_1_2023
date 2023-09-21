@@ -153,7 +153,7 @@ namespace MGroup.MSolve.Discretization.Embedding
 			//if (e == null || !isElementEmbedded) return matrix;
 			if (e == null) return matrix;
 			if (e.EmbeddedNodes.Count == 0) return matrix;
-
+			//var temp = transformationMatrix.ThisTransposeTimesOtherTimesThis(matrix);
 			return transformationMatrix.ThisTransposeTimesOtherTimesThis(matrix);
 		}
 

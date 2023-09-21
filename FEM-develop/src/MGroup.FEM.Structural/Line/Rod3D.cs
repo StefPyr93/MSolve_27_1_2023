@@ -114,7 +114,6 @@ namespace MGroup.FEM.Structural.Line
 			double sq = s * q;
 			double E = this.youngModulus;
 			double A = SectionArea;
-
 			return dofEnumerator.GetTransformedMatrix(
 				Matrix.CreateFromArray(new double[,]
 				{

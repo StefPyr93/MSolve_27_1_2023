@@ -86,11 +86,11 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 
 			initialPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location).Split(new string[] { "\\bin" }, StringSplitOptions.None)[0];
 			folderName = "SavedFiles";
-			netPathName = "cement_network_architecture";
+			netPathName = "mortar_network_architecture";
 			netPathName = Path.Combine(initialPath, folderName, netPathName);
-			weightsPathName = "cement_trained_weights";
+			weightsPathName = "mortar_trained_weights";
 			weightsPathName = Path.Combine(initialPath, folderName, weightsPathName);
-			normalizationPathName = "cement_normalization";
+			normalizationPathName = "mortar_normalization";
 			normalizationPathName = Path.Combine(initialPath, folderName, normalizationPathName);
 
 			mortarNeuralNetwork = new FeedForwardNeuralNetwork();
@@ -109,11 +109,11 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 
 			initialPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location).Split(new string[] { "\\bin" }, StringSplitOptions.None)[0];
 			folderName = "SavedFiles";
-			netPathName = "cement_network_architecture";
+			netPathName = "concrete_network_architecture";
 			netPathName = Path.Combine(initialPath, folderName, netPathName);
-			weightsPathName = "cement_trained_weights";
+			weightsPathName = "concrete_trained_weights";
 			weightsPathName = Path.Combine(initialPath, folderName, weightsPathName);
-			normalizationPathName = "cement_normalization";
+			normalizationPathName = "concrete_normalization";
 			normalizationPathName = Path.Combine(initialPath, folderName, normalizationPathName);
 
 			concreteNeuralNetwork = new FeedForwardNeuralNetwork();
@@ -131,9 +131,9 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 				var nodeId = i + 1;
 				model.NodesDictionary.Add(nodeId, new Node(
 					id: nodeId,
-					x: cementNodes[0][i, 1],
-					y: cementNodes[0][i, 2],
-					z: cementNodes[0][i, 3]));
+					x: 0.001 * cementNodes[0][i, 1],
+					y: 0.001 * cementNodes[0][i, 2],
+					z: 0.001 * cementNodes[0][i, 3]));
 			}
 
 			for (var i = 0; i < cementElements[0].GetLength(0); i++)
@@ -168,7 +168,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 			var loads = new List<INodalLoadBoundaryCondition>();
 			for (var i = 0; i < cementSets[1].GetLength(0); i++)
 			{
-				loads.Add(new NodalLoad(model.NodesDictionary[cementSets[1][i]], StructuralDof.TranslationY, amount: 1 * 1.5d));
+				loads.Add(new NodalLoad(model.NodesDictionary[cementSets[1][i]], StructuralDof.TranslationY, amount: 1.5*1e-6d));
 			}
 
 			model.BoundaryConditions.Add(new StructuralBoundaryConditionSet(constraints, loads));
@@ -187,9 +187,9 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 				var nodeId = i + 1;
 				model.NodesDictionary.Add(nodeId, new Node(
 					id: nodeId,
-					x: mortarNodes[0][i, 1],
-					y: mortarNodes[0][i, 2],
-					z: mortarNodes[0][i, 3]));
+					x: 0.001 * mortarNodes[0][i, 1],
+					y: 0.001 * mortarNodes[0][i, 2],
+					z: 0.001 * mortarNodes[0][i, 3]));
 			}
 
 			for (var i = 0; i < mortarElements[0].GetLength(0); i++)
@@ -224,7 +224,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 			var loads = new List<INodalLoadBoundaryCondition>();
 			for (var i = 0; i < mortarSets[1].GetLength(0); i++)
 			{
-				loads.Add(new NodalLoad(model.NodesDictionary[mortarSets[1][i]], StructuralDof.TranslationZ, amount: 1 * 13.65d));
+				loads.Add(new NodalLoad(model.NodesDictionary[mortarSets[1][i]], StructuralDof.TranslationZ, amount: 0.82*13.65e-6d));
 			}
 
 			model.BoundaryConditions.Add(new StructuralBoundaryConditionSet(constraints, loads));
@@ -243,9 +243,9 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 				var nodeId = i + 1;
 				model.NodesDictionary.Add(nodeId, new Node(
 					id: nodeId,
-					x: concreteNodes[0][i, 1],
-					y: concreteNodes[0][i, 2],
-					z: concreteNodes[0][i, 3]));
+					x: 0.001 * concreteNodes[0][i, 1],
+					y: 0.001 * concreteNodes[0][i, 2],
+					z: 0.001 * concreteNodes[0][i, 3]));
 			}
 
 			for (var i = 0; i < concreteNodes[1].GetLength(0); i++)
@@ -253,9 +253,9 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 				var nodeId = concreteNodes[0].GetLength(0) + i + 1;
 				model.NodesDictionary.Add(nodeId, new Node(
 					id: nodeId,
-					x: concreteNodes[1][i, 1],
-					y: concreteNodes[1][i, 2],
-					z: concreteNodes[1][i, 3]));
+					x: 0.001 * concreteNodes[1][i, 1],
+					y: 0.001 * concreteNodes[1][i, 2],
+					z: 0.001 * concreteNodes[1][i, 3]));
 			}
 
 			for (var i = 0; i < concreteElements[0].GetLength(0); i++)
@@ -269,7 +269,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 					nodeSet[j] = (Node)model.NodesDictionary[nodeID];
 				}
 
-				//var elementFactory = new FEM.Structural.Continuum.ContinuumElement3DFactory(new ElasticMaterial3D(parameters[0], 0.2), new TransientAnalysisProperties(1, 0, 0));
+				//var elementFactory = new FEM.Structural.Continuum.ContinuumElement3DFactory(new ElasticMaterial3D(20, 0.2), new TransientAnalysisProperties(1, 0, 0));
 				//var elementFactory = new FEM.Structural.Continuum.ContinuumElement3DFactory(new DruckerPrager3DFunctional(20, 0.2, 30, 30, 0.025, x => 0.025 + 2 * x), new TransientAnalysisProperties(1, 0, 0));
 				var elementFactory = new FEM.Structural.Continuum.ContinuumElement3DFactory(new NeuralNetworkMaterial3D(concreteNeuralNetwork, new double[3] { parameters[0], parameters[1], parameters[2] }), new TransientAnalysisProperties(1, 0, 0));
 				var element = elementFactory.CreateElement(CellType.Hexa8, nodeSet);
@@ -289,7 +289,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 					rebarNodeSet[j] = (Node)model.NodesDictionary[nodeID];
 				}
 
-				var rebarElement = new Rod3D(new List<INode>() { rebarNodeSet[0], rebarNodeSet[1] }, youngModulus: 1);
+				var rebarElement = new Rod3D(new List<INode>() { rebarNodeSet[0], rebarNodeSet[1] }, youngModulus: 200) { Density = 7.750, SectionArea = 0.00031415926 };
 				rebarElement.ID = concreteElements[0].GetLength(0) + i + 1;
 
 				model.ElementsDictionary.Add(rebarElement.ID, rebarElement);
@@ -314,7 +314,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 			var loads = new List<INodalLoadBoundaryCondition>();
 			for (var i = 0; i < concreteSets[1].GetLength(0); i++)
 			{
-				loads.Add(new NodalLoad(model.NodesDictionary[concreteSets[1][i]], StructuralDof.TranslationY, amount: 1 * 100*1e-3d));
+				loads.Add(new NodalLoad(model.NodesDictionary[concreteSets[1][i]], StructuralDof.TranslationY, amount: 150*1e-6d));
 			}
 
 			model.BoundaryConditions.Add(new StructuralBoundaryConditionSet(constraints, loads));
@@ -465,7 +465,7 @@ namespace MGroup.Stochastic.Tests.SupportiveClasses
 			var monitorList = new List<(INode node, IDofType dof)>();
 			for (int i = 0; i < concreteSets[2].GetLength(0); i++)
 			{
-				monitorList.Add((model.NodesDictionary[cementSets[2][i]], StructuralDof.TranslationY));
+				monitorList.Add((model.NodesDictionary[concreteSets[2][i]], StructuralDof.TranslationY));
 			}
 			loadControlAnalyzer.TotalDisplacementsPerIncrementLog = new TotalDisplacementsPerIncrementLog(
 				monitorList, algebraicModel

@@ -26,15 +26,26 @@ using MGroup.Multiscale.SupportiveClasses;
 
 namespace MGroup.Multiscale
 {
-	public class CntReinforcedElasticNanocomposite : IRVEbuilder
+	public class EmbeddedCntElasticNanocomposite : IRVEbuilder
 	{
-		int hexa1 = 3;
-		int hexa2 = 3;
-		int hexa3 = 3;
 
-		double L01 = 100;
-		double L02 = 100;
-		double L03 = 100;
+		int matrixDiscretization = 15;
+		int cntDiscretization = 10;
+		double matrixLength = 2;
+		int cntNumberY = 2;
+		int cntNumberZ = 2;
+		private double youngModulus = 1.0;//1.051e12; // 5490; // 
+		private double shearModulus = 1.0;//0.45e12; // 871; // 
+
+		private double[,] connectivity = null;
+
+		int hexa1;
+		int hexa2;
+		int hexa3;
+
+		double L01;
+		double L02;
+		double L03;
 
 		IIsotropicContinuumMaterial3D matrixMaterial;
 		IIsotropicContinuumMaterial3D inclusionMaterial;
@@ -43,22 +54,19 @@ namespace MGroup.Multiscale
 		int embeddedElements;
 		int hostNodes;
 		int embeddedNodes;
-
 		// cnt paramaters
+		double cntLength;
+		double cntRadius;
 		IIsotropicContinuumMaterial3D CntMaterial;
 		int numberOfCnts;
-		int cntLength = 50;
-		int elementsPerCNT = 1;
 		// define mechanical properties
-		private double youngModulus = 1.0;//1.051e12; // 5490; // 
-		private double shearModulus = 1.0;//0.45e12; // 871; // 
 		double poissonRatio;  //2.15; // 0.034;
-		double area = 694.77; // 1776.65;  // CNT(20,20)-LinearEBE-TBT-L = 10nm
-		double inertiaY = 100.18; //1058.55;
-		double inertiaZ = 100.18; //1058.55;1058.55;
-		double torsionalInertia = 68.77; //496.38;
-		double effectiveAreaY = 694.77;
-		double effectiveAreaZ = 694.77;
+		double area; // 1776.65;  // CNT(20,20)-LinearEBE-TBT-L = 10nm
+		double inertiaY; //1058.55;
+		double inertiaZ; //1058.55;1058.55;
+		double torsionalInertia; //496.38;
+		double effectiveAreaY;
+		double effectiveAreaZ;
 		int subdomainID = 0;
 
 		// Cohesive Zone mechanical properties
@@ -76,7 +84,7 @@ namespace MGroup.Multiscale
 
 		public bool readFromText;
 
-		public CntReinforcedElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, ICohesiveZoneMaterial cohesiveMaterial = null)
+		public EmbeddedCntElasticNanocomposite(int numberOfCnts, IIsotropicContinuumMaterial3D matrixMaterial, IIsotropicContinuumMaterial3D inclusionMaterial = null, ICohesiveZoneMaterial cohesiveMaterial = null)
 		{
 			var K_el = 10; var K_pl = 1; var T_max = 0.1;
 			//this.matrixMaterial = new ElasticMaterial3D(youngModulus: 3.5, poissonRatio: 0.4);
@@ -84,52 +92,8 @@ namespace MGroup.Multiscale
 			this.matrixMaterial = matrixMaterial;
 			this.inclusionMaterial = inclusionMaterial;
 			this.cohesiveMaterial = cohesiveMaterial;
+			CalculateInclusionProperties();
 			//this.matrixMaterial = new NeuralNetworkTrainedMaterial();// { ConstParameters = this.constParameters };
-
-			//inclusionMaterial = new ElasticMaterial3D()
-			//{ YoungModulus = 60, PoissonRatio = 0.22, };
-
-			//this.matrixMaterial = new MazarsConcreteMaterial()
-			//{
-			//    youngModulus = 20,
-			//    poissonRatio = 0.2,
-			//    At = 1.2, //At = 1.0,
-			//    Bt = 15000, //Bt = 15000,
-			//    Ac = 1.0,// 1.2,
-			//    Bc = 1500,//1500,
-			//    Strain_0 = 0.0001,//0.0001,
-			//    Veta = 1,
-			//};
-
-			//this.matrixMaterial = new DruckerPragerMaterial3D(youngModulus: 3.5, poissonRatio: 0.4, friction: 20, dilation: 20, cohesion: 0.01, hardeningModulus: 1)
-			//{
-			//};
-
-			//this.matrixMaterial = new ExponentialDamageMaterial()
-			//{
-			//    youngModulus = 20,
-			//    poissonRatio = 0.2,
-			//    A = 1,// 1.2,
-			//    B = 500,//1500,
-			//    Strain_0 = 0.001,
-			//    Veta = 1,
-			//};
-
-			//this.matrixMaterial = new BilinearDamageMaterial()
-			//{
-			//    youngModulus = 20,
-			//    poissonRatio = 0.2,
-			//    Strain_0 = 0.002,
-			//    Strain_f = 0.010,
-			//};
-
-			//this.matrixMaterial = new MohrCoulombMaterial(1000, 0.3, 5.5, 10, 5);
-
-			//this.matrixMaterial = new VonMisesMaterial3D(20, 0.2, 0.05, -10);
-
-			//this.matrixMaterial = new SimpleExponentialModel();
-
-			//this.matrixMaterial = new TabularDamageMaterial() { youngModulus = 20, poissonRatio = 0.2, };
 
 			if (inclusionMaterial == null)
 				this.CntMaterial = new ElasticMaterial3D(youngModulus, (double)((youngModulus / (2 * shearModulus)) - 1));
@@ -146,6 +110,61 @@ namespace MGroup.Multiscale
 			double effectiveAreaZ = area;
 
 			this.numberOfCnts = numberOfCnts;
+		}
+
+		private void CalculateInclusionProperties() 
+		{
+			L01 = matrixLength; L02 = matrixLength; L03 = matrixLength;
+			hexa1 = matrixDiscretization; hexa2 = matrixDiscretization; hexa3 = matrixDiscretization;
+			cntLength = 0.82 * matrixLength;
+			cntRadius = 0.015 * matrixLength;
+			area = Math.PI * Math.Pow(cntRadius, 2);
+			effectiveAreaY = area;
+			effectiveAreaZ = area;
+			inertiaY = 1 / 4 * Math.PI * Math.Pow(cntRadius, 4);
+			inertiaZ = 1 / 4 * Math.PI * Math.Pow(cntRadius, 4);
+			torsionalInertia = inertiaY + inertiaZ;
+
+			var nCNTy = cntNumberY - 1;
+			var nCNTz = cntNumberZ - 1;
+			var nInclusions = (nCNTy) * (nCNTz);
+			var Ldiscry = matrixLength / cntNumberY;
+			var Ldiscrz = matrixLength / cntNumberZ;
+
+			connectivity = new double[2*nInclusions, 6];
+			var t = 0;
+			var zor = -0.5 * matrixLength + Ldiscrz;
+			for (var i1 = 0; i1 < nCNTz; i1++)
+			{
+				var yor = -0.5 * matrixLength + Ldiscry;
+				for (var i2 = 0; i2 < nCNTy; i2++)
+				{
+					connectivity[t, 0] = -0.5 * cntLength;
+					connectivity[t, 1] = yor;
+					connectivity[t, 2] = zor;
+					connectivity[t + 1, 0] = 0.5 * cntLength;
+					connectivity[t + 1, 1] = yor;
+					connectivity[t + 1, 2] = zor;
+					t = t + 2;
+
+					yor = yor + Ldiscry;
+				}
+				zor = zor + Ldiscrz;
+			}
+
+			//For i2 In { 1:nCNTy}
+
+			//// THIS CHANGES ACCORDING TO nInclusions
+			//Cylinder(1 + t) = { -0.5 * Lc,  yor, zor, Lc, 0, 0, r, 2 * Pi};
+			//Physical Volume(t) = { 1 + t};
+			//t = t + 1;
+
+			//yor = yor + Ldiscry;
+			//EndFor
+			//zor = zor + Ldiscrz;
+			//EndFor
+
+			//connectivity = new double[,] { { -0.5 * cntLength, 0, 0 }, { 0.5 * cntLength, 0, 0 } };
 		}
 
 		public Tuple<Model, Dictionary<int, INode>, double> GetModelAndBoundaryNodes()
@@ -173,7 +192,7 @@ namespace MGroup.Multiscale
 				AddCntBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
 				var embeddedGrouping = EmbeddedBeam3DGrouping.CreateFullyBonded(model, model.ElementsDictionary
 				.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements)
-				.Select(kv => kv.Value).ToArray(), true);
+				.Select(kv => kv.Value).ToArray(), false);
 				//AddCohesiveBeamElements(model, cntNodeIds, cntNodeCoords, cntElementConnectivity);
 				//var embeddedGrouping = EmbeddedBeam3DGrouping.CreateCohesive(model, model.ElementsDictionary
 				//			.Where(x => x.Key < hostElements).Select(kv => kv.Value).ToArray(), model.ElementsDictionary.Where(x => x.Key >= hostElements + embeddedElements)
@@ -195,29 +214,6 @@ namespace MGroup.Multiscale
 			}
 			return new Tuple<Model, Dictionary<int, INode>, double>(model, boundaryNodes, L01 * L02 * L03);
 		}
-
-		//private List<int> GetBoundaryNodeIds()
-		//{
-		//    var boundaryNodes = new List<int>();
-
-		//    for (int k = 0; k < hexa3 + 1; k++)
-		//    {
-		//        var indexZeta = (hexa1 + 1) * (hexa2 + 1) * k;
-		//        for (int i = 0; i < hexa1 + 1; i++)
-		//        {
-		//            boundaryNodes.Add(i + indexZeta);
-		//            boundaryNodes.Add(i + (hexa1 + 1) * hexa2 + indexZeta);
-		//        }
-
-		//        for (int j = 0; j < hexa2 + 1; j++)
-		//        {
-		//            boundaryNodes.Add(indexZeta + (hexa1 + 1) * j);
-		//            boundaryNodes.Add(indexZeta + (hexa1 + 1) * j + hexa1);
-		//        }
-		//    }
-
-		//    return boundaryNodes.Distinct().ToList();
-		//}
 
 		private List<int> GetBoundaryNodeIds()
 		{
@@ -279,7 +275,8 @@ namespace MGroup.Multiscale
 				};
 				var cntMaterialClone = (ElasticMaterial3D)this.CntMaterial;
 				var CntMaterial = new ElasticMaterial3D(cntMaterialClone.YoungModulus, cntMaterialClone.PoissonRatio);
-				IElementType beam_1 = new Beam3DCorotationalQuaternion(elementNodes, CntMaterial.YoungModulus, CntMaterial.PoissonRatio, 7.85, beamSection);
+				//IElementType beam_1 = new Beam3DCorotationalQuaternion(elementNodes, CntMaterial.YoungModulus, CntMaterial.PoissonRatio, 7.85, beamSection);
+				IElementType beam_1 = new Rod3D(elementNodes, CntMaterial.YoungModulus) {SectionArea = area, Density = 7.85 };
 				beam_1.ID = i + hostElements;
 				//var beamElement = new Element { ID = i + hostElements, ElementType = beam_1 };
 
@@ -373,35 +370,8 @@ namespace MGroup.Multiscale
 				var cntNodeCoordinates = new double[numberOfCnts * 2, 3];
 				var cntElementConnectivity = new int[numberOfCnts, 2];
 				
-				var cntGenerator = new RandomCntGeometryGenerator(elementsPerCNT, cntLength, numberOfCnts, L01, L02, L03, hexa1, hexa2, hexa3);
-				(cntNodeIds, cntNodeCoordinates, cntElementConnectivity) = cntGenerator.GenerateCnts();
-				//return (new int[5], new double[5, 5], new int[5, 5]);
-				//var SpecPath = "E:\\Desktop\\MsolveOutputs\\matlabGeneratedCNTs\\RVE_configurations";
-				//string CNTgeometryFileName = "nodes_5_wf.txt";
-				//string CNTconnectivityFileName = "connectivity_5_wf.txt";
-				//string fileNameOnlyCNTgeometryFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTgeometryFileName));
-				//string fileNameOnlyCNTconnectivityFileName = Path.Combine(SpecPath, Path.GetFileNameWithoutExtension(CNTconnectivityFileName));
-				//string extension = Path.GetExtension(CNTgeometryFileName);
-				//string extension_2 = Path.GetExtension(CNTconnectivityFileName);
-
-				//string currentCNTconnectivityFileName = string.Format("{0}{1}", fileNameOnlyCNTconnectivityFileName, extension_2);
-
-				//string currentCNTgeometryFileName = string.Format("{0}{1}", fileNameOnlyCNTgeometryFileName, extension);
-
-				//using (var writer = new StreamWriter(currentCNTgeometryFileName, false))
-				//{
-				//	for (int i = 0; i < cntNodeCoordinates.GetLength(0); i++)
-				//	{
-				//		writer.WriteLine($"{cntNodeIds[i]} {cntNodeCoordinates[i, 0]} {cntNodeCoordinates[i, 1]} {cntNodeCoordinates[i, 2]}");
-				//	}
-				//}
-				//using (var writer = new StreamWriter(currentCNTconnectivityFileName, false))
-				//{
-				//	for (int i = 0; i < cntElementConnectivity.GetLength(0); i++)
-				//	{
-				//		writer.WriteLine($"{cntElementConnectivity[i, 0]} {cntElementConnectivity[i, 1]}");
-				//	}
-				//}
+				var cntGenerator = new RandomCntGeometryGenerator(cntDiscretization, cntLength, numberOfCnts, L01, L02, L03, hexa1, hexa2, hexa3);
+				(cntNodeIds, cntNodeCoordinates, cntElementConnectivity) = cntGenerator.GenerateCnts(connectivity);
 				return (cntNodeIds, cntNodeCoordinates, cntElementConnectivity);
 			}
 			else
@@ -462,7 +432,6 @@ namespace MGroup.Multiscale
 					{
 						string text = reader.ReadLine();
 						string[] bits = text.Split(' ');
-						//int elementID = int.Parse(bits[0]); // matrixElements + CNTelements
 						int node1 = int.Parse(bits[0]); // matrixNodes + CNTnodes
 						int node2 = int.Parse(bits[1]); // matrixNodes + CNTnodes
 						cntElementConnectivity[i, 0] = node1; cntElementConnectivity[i, 1] = node2;
@@ -488,9 +457,6 @@ namespace MGroup.Multiscale
 			}
 
 			var renumbering = new int[] { 6, 7, 4, 5, 2, 3, 0, 1 };
-			//var renumbering = new int[] { 0, 3, 2, 1, 4, 7, 6, 5 };
-			//var renumbering = new int[] { 6, 7, 4, 5, 2, 3, 0, 1 };
-			//var renumbering = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
 			for (int i1 = 0; i1 < elementConnectivity.GetLength(0); i1++)
 			{
 				List<INode> nodeSet = new List<INode>();
@@ -499,26 +465,8 @@ namespace MGroup.Multiscale
 					int nodeID = elementConnectivity[i1, renumbering[j]];
 					nodeSet.Add(model.NodesDictionary[nodeID]);
 				}
-				//var matrixMaterialClone = (ElasticMaterial3D)this.matrixMaterial;
-				//List<IIsotropicContinuumMaterial3D> matrixMaterialList = new List<IIsotropicContinuumMaterial3D>(); ;
-				//for (int i = 0; i < GaussLegendre3D.GetQuadratureWithOrder(2, 2, 2).IntegrationPoints.Count; i++)
-				//{
-				//	matrixMaterialList.Add(new ElasticMaterial3D(matrixMaterialClone.YoungModulus, matrixMaterialClone.PoissonRatio));
-				//}
-				//IReadOnlyList<IIsotropicContinuumMaterial3D> matrixMaterialReadOnly = (IReadOnlyList<IIsotropicContinuumMaterial3D>)matrixMaterialList;
-
-
-				//var interpolation = InterpolationHexa8.UniqueInstance;
-
-				//var elementType = new Hexa8Fixed(matrixMaterial);
-				//elementType.ismaterialfromNN = true;
-				//var trandom = new TRandom();
-				//var el = trandom.ContinuousUniform(0, 1);
-				//var elementFactory = new ContinuumElement3DFactory(matrixMaterial, commonDynamicProperties: null);
-				//IElementType e1 = elementFactory.CreateElement(CellType.Hexa8, nodeSet);
 				var elementFactory = new Multiscale.SupportiveClasses.ContinuumElement3DFactory((IContinuumMaterial3D)matrixMaterial.Clone(), commonDynamicProperties: null);
 				IElementType e1 = elementFactory.CreateElement(CellType.Hexa8, nodeSet);
-				//IElementType e1 = new Multiscale.SupportiveClasses.ContinuumElement3D(nodeSet, GaussLegendre3D.GetQuadratureWithOrder(2, 2, 2), matrixMaterialReadOnly, interpolation);
 				e1.ID = i1;
 
 				model.ElementsDictionary.Add(e1.ID, e1);
@@ -621,12 +569,12 @@ namespace MGroup.Multiscale
 			//    var randomCnts = (int)random.Normal(numberOfCnts, 100);
 			//    var cnts=randomCnts<0?1:randomCnts;
 			var cnts = numberOfCnts;
-			return new CntReinforcedElasticNanocomposite(cnts, matrixMaterial, inclusionMaterial, cohesiveMaterial);
+			return new EmbeddedCntElasticNanocomposite(cnts, matrixMaterial, inclusionMaterial, cohesiveMaterial);
 		}
 
 		public object Clone()
 		{
-			var rveBuilder = new CntReinforcedElasticNanocomposite(numberOfCnts, matrixMaterial, inclusionMaterial, cohesiveMaterial)
+			var rveBuilder = new EmbeddedCntElasticNanocomposite(numberOfCnts, matrixMaterial, inclusionMaterial, cohesiveMaterial)
 			{
 			};
 			rveBuilder.model = (Model)this.model.Clone();

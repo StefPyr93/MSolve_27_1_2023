@@ -34,7 +34,7 @@ namespace MGroup.Multiscale.Tests.RveTemplates.Tests.CntReinforcedElasticNanocom
 
 			bool append = false;
 
-			int numberOfCnts = 100;
+			int numberOfCnts = 260;
 			int solutions = 1;
 			int increments_per_solution = 3;
 			double[][] Input = new double[solutions * increments_per_solution][];
